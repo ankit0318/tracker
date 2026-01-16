@@ -10,14 +10,7 @@ interface TimerOverlayProps {
 }
 
 const MOTIVATIONAL_QUOTES = [
-  "Focus on the step, not the mountain.",
-  "Consistency is the companion of success.",
-  "Your future self will thank you.",
-  "One thing at a time.",
-  "Deep work, great results.",
-  "Progress over perfection.",
-  "Quiet the mind and the soul will speak.",
-  "The secret of getting ahead is getting started."
+ 
 ];
 
 const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onComplete, darkMode }) => {
