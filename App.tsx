@@ -56,7 +56,8 @@ const App: React.FC = () => {
   });
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('ascend_theme');
-    return saved === 'dark';
+    // Default to dark mode if no preference is saved
+    return saved === null ? true : saved === 'dark';
   });
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
