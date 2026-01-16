@@ -9,6 +9,17 @@ interface TimerOverlayProps {
   darkMode: boolean;
 }
 
+const MOTIVATIONAL_QUOTES = [
+  "Focus on the step, not the mountain.",
+  "Consistency is the companion of success.",
+  "Your future self will thank you.",
+  "One thing at a time.",
+  "Deep work, great results.",
+  "Progress over perfection.",
+  "Quiet the mind and the soul will speak.",
+  "The secret of getting ahead is getting started."
+];
+
 const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onComplete, darkMode }) => {
   const [duration, setDuration] = useState<number>(25); // minutes
   const [timeLeft, setTimeLeft] = useState<number>(0);
@@ -16,14 +27,43 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [quoteIndex, setQuoteIndex] = useState(0);
   
   const timerRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // Constants for circular ring
   const size = 320;
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
+
+  const playRingSound = () => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioContextRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5); // Slide down to A4
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 1.5);
+    } catch (e) {
+      console.warn("Audio feedback failed:", e);
+    }
+  };
 
   const startTimer = () => {
     const totalSeconds = duration * 60;
@@ -43,6 +83,15 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
     onClose();
   };
 
+  // Quote cycling effect
+  useEffect(() => {
+    if (!isStarted) return;
+    const interval = setInterval(() => {
+      setQuoteIndex((prev) => (prev + 1) % MOTIVATIONAL_QUOTES.length);
+    }, 20000); // Change quote every 20 seconds
+    return () => clearInterval(interval);
+  }, [isStarted]);
+
   useEffect(() => {
     if (isActive && !isPaused && timeLeft > 0) {
       timerRef.current = window.setInterval(() => {
@@ -55,8 +104,9 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
 
     if (timeLeft === 0 && isStarted && isActive) {
       setIsActive(false);
-      onComplete(elapsed);
-      onClose();
+      playRingSound();
+      // Brief delay before closing automatically if desired, 
+      // but let's just trigger complete and let the user click Done to see the status.
     }
 
     return () => {
@@ -122,7 +172,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
         </div>
       </div>
 
-      <div className="relative flex items-center justify-center mb-12">
+      <div className="relative flex items-center justify-center mb-8">
         <svg width={size} height={size} className="transform -rotate-90">
           <circle
             cx={size / 2}
@@ -149,10 +199,22 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
           />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <span className="text-8xl font-light tracking-tighter tabular-nums drop-shadow-sm">
+          <span className={`text-8xl font-light tracking-tighter tabular-nums transition-opacity duration-300 ${timeLeft === 0 ? 'opacity-20' : 'opacity-100'}`}>
             {formatTime(timeLeft)}
           </span>
+          {timeLeft === 0 && (
+            <span className="absolute text-2xl font-light uppercase tracking-[0.3em] animate-pulse">
+              Completed
+            </span>
+          )}
         </div>
+      </div>
+
+      {/* Motivational Quote Display */}
+      <div className="h-12 mb-8 flex items-center justify-center px-6">
+        <p key={quoteIndex} className="text-sm font-light italic opacity-60 text-center tracking-wide animate-in fade-in slide-in-from-bottom-2 duration-1000">
+          "{MOTIVATIONAL_QUOTES[quoteIndex]}"
+        </p>
       </div>
 
       <div className="flex items-center gap-8">
@@ -175,7 +237,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
       </div>
 
       <div className="absolute bottom-10 opacity-30 text-[10px] font-medium uppercase tracking-[0.5em]">
-        Focusing deeply. Stay consistent.
+        Stay present. Keep ascending.
       </div>
     </div>
   );

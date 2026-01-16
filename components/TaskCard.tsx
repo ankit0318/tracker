@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Task, Subtask } from '../types';
 import { 
   CheckCircle2, 
@@ -24,10 +24,20 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTimer, darkMode = false }) => {
-  // Subtasks are opened by default
   const [isExpanded, setIsExpanded] = useState(true);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  
+  const [lastCompletedId, setLastCompletedId] = useState<string | null>(null);
+  const [justFinishedTask, setJustFinishedTask] = useState(false);
+
+  useEffect(() => {
+    if (task.percentage === 100 && !justFinishedTask) {
+      setJustFinishedTask(true);
+      const timer = setTimeout(() => setJustFinishedTask(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [task.percentage]);
 
   const formatElapsedTime = (seconds?: number) => {
     if (!seconds || seconds === 0) return '0m';
@@ -48,6 +58,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
 
   const toggleTaskCompletion = () => {
     const nextStatus = !task.isCompleted;
+    if (nextStatus) {
+      setLastCompletedId(task.id);
+      setTimeout(() => setLastCompletedId(null), 500);
+    }
     onUpdate({
       ...task,
       isCompleted: nextStatus,
@@ -88,6 +102,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
   };
 
   const toggleSubtask = (subId: string) => {
+    const subtask = task.subtasks.find(s => s.id === subId);
+    if (subtask && !subtask.isCompleted) {
+      setLastCompletedId(subId);
+      setTimeout(() => setLastCompletedId(null), 500);
+    }
+    
     const updatedSubtasks = task.subtasks.map(s => 
       s.id === subId ? { ...s, isCompleted: !s.isCompleted } : s
     );
@@ -97,66 +117,72 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
   };
 
   return (
-    <div className={`group rounded-lg border transition-all shadow-sm hover:shadow-md overflow-hidden ${
+    <div className={`group rounded-lg border transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden ${
+      justFinishedTask ? 'task-completed-glow' : ''
+    } ${
       darkMode 
-        ? `bg-slate-900 border-slate-800 hover:border-indigo-500/50 ${task.isCompleted ? 'bg-slate-800/40 opacity-80' : ''}` 
+        ? `bg-slate-900 border-slate-800 hover:border-indigo-500/50 ${task.isCompleted ? 'bg-slate-800/40 opacity-95' : ''}` 
         : `bg-white border-slate-200 hover:border-indigo-300 ${task.isCompleted ? 'bg-slate-50/50' : ''}`
     }`}>
-      {/* Header section */}
-      <div className={`flex items-center gap-2 p-2.5 transition-colors ${
+      {/* Header section - FIXED: Improved completed state background */}
+      <div className={`flex items-center gap-2 p-2.5 transition-all duration-500 ${
         task.isCompleted 
-          ? 'bg-slate-100 dark:bg-slate-800/60' 
+          ? 'bg-emerald-500/10 dark:bg-emerald-950/40' 
           : 'bg-indigo-600'
       }`}>
         <button 
           onClick={toggleTaskCompletion}
-          className={`flex-shrink-0 transition-all duration-300 ${task.isCompleted ? 'text-emerald-500 scale-110' : 'text-white/60 hover:text-white'}`}
+          className={`flex-shrink-0 transition-all duration-300 transform ${
+            task.isCompleted ? 'text-emerald-500 scale-110' : 'text-white/60 hover:text-white'
+          } ${lastCompletedId === task.id ? 'animate-pop' : ''}`}
         >
           <CheckCircle2 size={18} fill={task.isCompleted ? 'currentColor' : 'transparent'} />
         </button>
         
         <div className="min-w-0 flex-1">
-          <h3 className={`text-[13px] font-bold truncate transition-colors ${
+          <h3 className={`text-[13px] font-bold truncate transition-all duration-500 ${
             task.isCompleted 
-              ? 'text-slate-400 dark:text-slate-500 line-through' 
+              ? 'text-emerald-600 dark:text-emerald-400 opacity-80' 
               : 'text-white'
-          }`}>
+          } ${task.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
             {task.title}
           </h3>
         </div>
 
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={handleAiBreakdown} disabled={isAiLoading} title="AI Breakdown" className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded">
-            {isAiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-          </button>
-          <button onClick={() => onDelete(task.id)} title="Delete" className="p-1 text-white/60 hover:text-red-300 hover:bg-white/10 rounded">
+          {!task.isCompleted && (
+            <button onClick={handleAiBreakdown} disabled={isAiLoading} title="AI Breakdown" className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded">
+              {isAiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+            </button>
+          )}
+          <button onClick={() => onDelete(task.id)} title="Delete" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-red-500 hover:bg-red-500/10' : 'text-white/60 hover:text-red-300 hover:bg-white/10'}`}>
             <Trash2 size={13} />
           </button>
-          <button onClick={() => setIsExpanded(!isExpanded)} title="Expand" className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded">
+          <button onClick={() => setIsExpanded(!isExpanded)} title="Expand" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-slate-600' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>
             {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
         </div>
       </div>
 
       <div className="p-2.5 pt-2">
-        {/* Total analytics line */}
         <div className="flex items-center gap-1.5 mb-2.5 opacity-60">
-           <Clock size={10} className="text-indigo-500" />
+           <Clock size={10} className={task.isCompleted ? 'text-emerald-500' : 'text-indigo-500'} />
            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-             Total Effort: {formatElapsedTime(task.totalTimeSpent)}
+             Effort: {formatElapsedTime(task.totalTimeSpent)}
            </span>
         </div>
 
-        {/* Progress Control */}
         <div className="relative group/progress">
           <div className="flex justify-between items-center mb-1">
              <div className={`h-1 flex-1 rounded-full overflow-hidden mr-2 transition-colors ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
                <div 
-                  className={`h-full transition-all duration-500 ${task.isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'}`}
+                  className={`h-full transition-all duration-700 ease-out ${task.isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'}`}
                   style={{ width: `${task.percentage}%` }}
                 />
              </div>
-             <span className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 w-6 text-right">{task.percentage}%</span>
+             <span className={`text-[10px] font-black w-6 text-right transition-colors duration-500 ${task.isCompleted ? 'text-emerald-500' : 'text-indigo-500 dark:text-indigo-400'}`}>
+               {task.percentage}%
+             </span>
           </div>
           <input
             type="range"
@@ -175,7 +201,9 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                 <div className="flex items-center gap-2 py-0.5">
                   <button 
                     onClick={() => toggleSubtask(sub.id)} 
-                    className={`flex-shrink-0 transition-all duration-200 ${sub.isCompleted ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-600 hover:text-indigo-400'}`}
+                    className={`flex-shrink-0 transition-all duration-300 transform ${
+                      sub.isCompleted ? 'text-emerald-500 scale-110' : 'text-slate-400 dark:text-slate-600 hover:text-indigo-400'
+                    } ${lastCompletedId === sub.id ? 'animate-pop' : ''}`}
                   >
                     {sub.isCompleted ? (
                       <CheckSquare size={13} fill="currentColor" className={`${darkMode ? 'bg-slate-900' : 'bg-white'} rounded-[2px]`} />
@@ -183,20 +211,22 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                       <Square size={13} />
                     )}
                   </button>
-                  <span className={`text-[11px] leading-tight flex-1 truncate transition-colors duration-200 ${
+                  <span className={`text-[11px] leading-tight flex-1 truncate transition-all duration-500 ${
                     sub.isCompleted 
-                      ? 'text-slate-400 dark:text-slate-600 line-through' 
+                      ? 'text-emerald-600/60 dark:text-emerald-400/40' 
                       : 'text-slate-600 dark:text-slate-400 font-medium'
-                  }`}>
+                  } ${sub.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
                     {sub.title}
                   </span>
-                  <button 
-                    onClick={() => onStartTimer(task.id, sub.title)}
-                    className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-indigo-500"
-                    title="Focus Timer"
-                  >
-                    <Clock size={11} />
-                  </button>
+                  {!sub.isCompleted && (
+                    <button 
+                      onClick={() => onStartTimer(task.id, sub.title)}
+                      className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-indigo-500"
+                      title="Focus Timer"
+                    >
+                      <Clock size={11} />
+                    </button>
+                  )}
                 </div>
                 {sub.timeSpent && sub.timeSpent > 0 && (
                   <div className="pl-5 flex items-center gap-1 opacity-40">
@@ -205,23 +235,25 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                 )}
               </div>
             ))}
-            <div className="flex items-center gap-1 mt-1">
-              <input
-                type="text"
-                placeholder="Add item..."
-                value={newSubtaskTitle}
-                onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addSubtask(newSubtaskTitle)}
-                className={`flex-1 text-[10px] px-1.5 py-0.5 rounded border-none outline-none transition-colors ${
-                  darkMode 
-                    ? 'bg-slate-800 text-slate-200 focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-600' 
-                    : 'bg-slate-50 text-slate-800 focus:ring-1 focus:ring-indigo-300 placeholder:text-slate-300'
-                }`}
-              />
-              <button onClick={() => addSubtask(newSubtaskTitle)} className="p-0.5 text-indigo-500 hover:scale-110 transition-transform">
-                <Plus size={12} />
-              </button>
-            </div>
+            {!task.isCompleted && (
+              <div className="flex items-center gap-1 mt-1">
+                <input
+                  type="text"
+                  placeholder="Add item..."
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addSubtask(newSubtaskTitle)}
+                  className={`flex-1 text-[10px] px-1.5 py-0.5 rounded border-none outline-none transition-colors ${
+                    darkMode 
+                      ? 'bg-slate-800 text-slate-200 focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-600' 
+                      : 'bg-slate-50 text-slate-800 focus:ring-1 focus:ring-indigo-300 placeholder:text-slate-300'
+                  }`}
+                />
+                <button onClick={() => addSubtask(newSubtaskTitle)} className="p-0.5 text-indigo-500 hover:scale-110 transition-transform">
+                  <Plus size={12} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
