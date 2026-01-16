@@ -4,7 +4,20 @@ import { Task, SortOption } from './types';
 import CircularProgress from './components/CircularProgress';
 import TaskCard from './components/TaskCard';
 import TimerOverlay from './components/TimerOverlay';
-import { Plus, LayoutGrid, Search, Target, Filter, CheckCircle, ListTodo, Sun, Moon } from 'lucide-react';
+import { 
+  Plus, 
+  LayoutGrid, 
+  Search, 
+  Target, 
+  Filter, 
+  CheckCircle, 
+  ListTodo, 
+  Sun, 
+  Moon,
+  Clock,
+  BarChart3,
+  ChevronRight
+} from 'lucide-react';
 
 const INITIAL_TASKS: Task[] = [
   {
@@ -66,16 +79,25 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
+  const formatTimeFull = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
   const stats = useMemo(() => {
-    if (tasks.length === 0) return { overall: 0, total: 0, completed: 0, subtasks: 0, subtasksCompleted: 0 };
+    if (tasks.length === 0) return { overall: 0, total: 0, completed: 0, subtasks: 0, subtasksCompleted: 0, totalTime: 0 };
     const totalPercentage = tasks.reduce((acc, task) => acc + task.percentage, 0);
     const subtasks = tasks.flatMap(t => t.subtasks);
+    const totalTime = tasks.reduce((acc, t) => acc + (t.totalTimeSpent || 0), 0);
     return {
       overall: totalPercentage / tasks.length,
       total: tasks.length,
       completed: tasks.filter(t => t.isCompleted).length,
       subtasks: subtasks.length,
-      subtasksCompleted: subtasks.filter(s => s.isCompleted).length
+      subtasksCompleted: subtasks.filter(s => s.isCompleted).length,
+      totalTime
     };
   }, [tasks]);
 
@@ -188,6 +210,7 @@ const App: React.FC = () => {
           
           {/* Dashboard Analytics Bar */}
           <aside className="lg:col-span-3 space-y-4">
+            {/* Progress Card */}
             <div className={`p-6 rounded-2xl border shadow-sm flex flex-col items-center transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
               <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Focus Score</h2>
               <CircularProgress percentage={stats.overall} size={150} strokeWidth={12} darkMode={darkMode} />
@@ -220,6 +243,61 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Time Analytics Card */}
+            <div className={`p-5 rounded-2xl border shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <BarChart3 size={14} className="text-indigo-500" />
+                  <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Analysis</h2>
+                </div>
+                <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>Today</div>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex items-baseline gap-1.5 mb-1">
+                  <span className={`text-3xl font-light tracking-tighter ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+                    {formatTimeFull(stats.totalTime)}
+                  </span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Total Focus</span>
+                </div>
+                <div className={`h-1 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                  <div className="h-full bg-indigo-500 animate-pulse" style={{ width: '100%' }} />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>Breakdown</h3>
+                {tasks.filter(t => (t.totalTimeSpent || 0) > 0).length > 0 ? (
+                  tasks.filter(t => (t.totalTimeSpent || 0) > 0).map(t => (
+                    <div key={t.id} className="flex items-center justify-between group cursor-default">
+                      <div className="flex flex-col min-w-0">
+                        <span className={`text-[11px] font-medium truncate ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t.title}</span>
+                        <div className="flex items-center gap-1">
+                           <div className={`w-1.5 h-1.5 rounded-full ${t.isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
+                           <span className={`text-[9px] font-bold ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>{t.percentage}% done</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-[11px] font-black tabular-nums ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                          {formatTimeFull(t.totalTimeSpent || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-2 text-center border border-dashed rounded-xl border-slate-200 dark:border-slate-800">
+                    <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-700' : 'text-slate-500'}`}>No logs today</p>
+                  </div>
+                )}
+              </div>
+
+              <button className={`w-full mt-6 py-2.5 rounded-xl border border-dashed text-[9px] font-black uppercase tracking-widest transition-all ${
+                darkMode ? 'border-slate-800 text-slate-500 hover:text-slate-400 hover:bg-slate-800/50' : 'border-slate-200 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50'
+              }`}>
+                Export Insights
+              </button>
             </div>
           </aside>
 
