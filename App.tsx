@@ -178,7 +178,7 @@ const App: React.FC = () => {
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm">
               <Target size={16} strokeWidth={2.5} />
             </div>
-            <h1 className="text-base font-black tracking-tight uppercase">TrackIt</h1>
+            <h1 className="text-base font-black tracking-tight ">TrackIt</h1>
           </div>
 
           <div className="flex items-center gap-4">
