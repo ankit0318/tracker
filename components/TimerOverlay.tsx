@@ -237,7 +237,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
       </div>
 
       <div className="absolute bottom-10 opacity-30 text-[10px] font-medium uppercase tracking-[0.5em]">
-        Stay present. Keep ascending.
+        Stay present. Keep tracking.
       </div>
     </div>
   );

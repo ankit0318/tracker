@@ -79,6 +79,7 @@ const App: React.FC = () => {
   }, [darkMode]);
 
   const formatTimeFull = (seconds: number) => {
+    if (seconds === 0) return '0m';
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     if (h > 0) return `${h}h ${m}m`;
@@ -86,17 +87,24 @@ const App: React.FC = () => {
   };
 
   const stats = useMemo(() => {
-    if (tasks.length === 0) return { overall: 0, total: 0, completed: 0, subtasks: 0, subtasksCompleted: 0, totalTime: 0 };
+    if (tasks.length === 0) return { overall: 0, total: 0, completed: 0, subtasks: 0, subtasksCompleted: 0, totalTime: 0, taskBreakdown: [] };
     const totalPercentage = tasks.reduce((acc, task) => acc + task.percentage, 0);
     const subtasks = tasks.flatMap(t => t.subtasks);
     const totalTime = tasks.reduce((acc, t) => acc + (t.totalTimeSpent || 0), 0);
+    
+    // Sort tasks by time spent for the breakdown
+    const taskBreakdown = [...tasks]
+      .filter(t => (t.totalTimeSpent || 0) > 0)
+      .sort((a, b) => (b.totalTimeSpent || 0) - (a.totalTimeSpent || 0));
+
     return {
       overall: totalPercentage / tasks.length,
       total: tasks.length,
       completed: tasks.filter(t => t.isCompleted).length,
       subtasks: subtasks.length,
       subtasksCompleted: subtasks.filter(s => s.isCompleted).length,
-      totalTime
+      totalTime,
+      taskBreakdown
     };
   }, [tasks]);
 
@@ -170,7 +178,7 @@ const App: React.FC = () => {
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm">
               <Target size={16} strokeWidth={2.5} />
             </div>
-            <h1 className="text-base font-black tracking-tight uppercase">Ascend</h1>
+            <h1 className="text-base font-black tracking-tight uppercase">TrackIt</h1>
           </div>
 
           <div className="flex items-center gap-4">
@@ -235,13 +243,44 @@ const App: React.FC = () => {
                   <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Analysis</h2>
                 </div>
               </div>
-              <div className="mb-6">
+              <div className="mb-6 pb-4 border-b border-slate-800/20 dark:border-slate-800">
                 <div className="flex items-baseline gap-1.5 mb-1">
                   <span className={`text-3xl font-light tracking-tighter ${darkMode ? 'text-white' : 'text-slate-800'}`}>
                     {formatTimeFull(stats.totalTime)}
                   </span>
                   <span className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Total Focus</span>
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className={`text-[9px] font-black uppercase tracking-[0.1em] ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>Task Breakdown</h3>
+                {stats.taskBreakdown.length > 0 ? (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                    {stats.taskBreakdown.map(task => (
+                      <div key={task.id} className="flex flex-col gap-1 group/item">
+                        <div className="flex justify-between items-center">
+                          <span className={`text-[11px] font-medium truncate max-w-[140px] ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                            {task.title}
+                          </span>
+                          <span className={`text-[10px] font-black tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                            {formatTimeFull(task.totalTimeSpent || 0)}
+                          </span>
+                        </div>
+                        <div className={`h-1 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                          <div 
+                            className="h-full bg-indigo-500/60 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, ((task.totalTimeSpent || 0) / stats.totalTime) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`py-6 flex flex-col items-center justify-center rounded-xl border border-dashed ${darkMode ? 'bg-slate-800/20 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                    <Clock size={16} className={`mb-1.5 opacity-20 ${darkMode ? 'text-white' : 'text-slate-400'}`} />
+                    <p className={`text-[8px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-700' : 'text-slate-400'}`}>No activity logged</p>
+                  </div>
+                )}
               </div>
             </div>
           </aside>
