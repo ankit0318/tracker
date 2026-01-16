@@ -1,0 +1,5 @@
+{
+  "name": " Ascend Progress Tracker",
+  "description": "A sophisticated task management dashboard featuring hierarchical subtasks, manual progress overrides, and a beautiful circular visualizer for overall goal completion.",
+  "requestFramePermissions": []
+}
