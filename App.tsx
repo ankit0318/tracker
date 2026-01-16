@@ -3,14 +3,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Task, SortOption } from './types';
 import CircularProgress from './components/CircularProgress';
 import TaskCard from './components/TaskCard';
-import { Plus, LayoutGrid, Search, ArrowUpDown, Target, Sparkles, Filter } from 'lucide-react';
+import { Plus, LayoutGrid, Search, Target, Filter, CheckCircle, ListTodo, Sun, Moon } from 'lucide-react';
 
 const INITIAL_TASKS: Task[] = [
   {
     id: '1',
-    title: 'Design Progress App',
-    description: 'Create high-fidelity mockups for the new progress tracking dashboard.',
-    percentage: 65,
+    title: 'Dashboard Design',
+    description: 'Personal tracker mockups.',
+    percentage: 85,
     isCompleted: false,
     subtasks: [
       { id: 's1', title: 'User research', isCompleted: true },
@@ -21,13 +21,13 @@ const INITIAL_TASKS: Task[] = [
   },
   {
     id: '2',
-    title: 'Learn Framer Motion',
-    description: 'Go through the documentation and build 3 production-ready animations.',
-    percentage: 33,
+    title: 'React Animation',
+    description: 'Build interactions.',
+    percentage: 50,
     isCompleted: false,
     subtasks: [
-      { id: 's4', title: 'Basic transitions', isCompleted: true },
-      { id: 's5', title: 'Gesture animations', isCompleted: false },
+      { id: 's4', title: 'Transitions', isCompleted: true },
+      { id: 's5', title: 'Hover states', isCompleted: false },
     ],
     createdAt: Date.now() - 86400000,
   }
@@ -35,8 +35,12 @@ const INITIAL_TASKS: Task[] = [
 
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('ascend_tasks');
+    const saved = localStorage.getItem('ascend_tasks_final');
     return saved ? JSON.parse(saved) : INITIAL_TASKS;
+  });
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('ascend_theme');
+    return saved === 'dark';
   });
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -44,19 +48,34 @@ const App: React.FC = () => {
   const [newTask, setNewTask] = useState({ title: '', description: '' });
 
   useEffect(() => {
-    localStorage.setItem('ascend_tasks', JSON.stringify(tasks));
+    localStorage.setItem('ascend_tasks_final', JSON.stringify(tasks));
   }, [tasks]);
 
-  const overallProgress = useMemo(() => {
-    if (tasks.length === 0) return 0;
-    const total = tasks.reduce((acc, task) => acc + task.percentage, 0);
-    return total / tasks.length;
+  useEffect(() => {
+    localStorage.setItem('ascend_theme', darkMode ? 'dark' : 'light');
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  const stats = useMemo(() => {
+    if (tasks.length === 0) return { overall: 0, total: 0, completed: 0, subtasks: 0, subtasksCompleted: 0 };
+    const totalPercentage = tasks.reduce((acc, task) => acc + task.percentage, 0);
+    const subtasks = tasks.flatMap(t => t.subtasks);
+    return {
+      overall: totalPercentage / tasks.length,
+      total: tasks.length,
+      completed: tasks.filter(t => t.isCompleted).length,
+      subtasks: subtasks.length,
+      subtasksCompleted: subtasks.filter(s => s.isCompleted).length
+    };
   }, [tasks]);
 
   const filteredAndSortedTasks = useMemo(() => {
     let result = tasks.filter(t => 
-      t.title.toLowerCase().includes(search.toLowerCase()) || 
-      t.description.toLowerCase().includes(search.toLowerCase())
+      t.title.toLowerCase().includes(search.toLowerCase())
     );
 
     result.sort((a, b) => {
@@ -72,7 +91,6 @@ const App: React.FC = () => {
   const addTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.title.trim()) return;
-
     const task: Task = {
       id: crypto.randomUUID(),
       title: newTask.title,
@@ -82,7 +100,6 @@ const App: React.FC = () => {
       subtasks: [],
       createdAt: Date.now(),
     };
-
     setTasks([task, ...tasks]);
     setNewTask({ title: '', description: '' });
     setShowAddModal(false);
@@ -93,108 +110,115 @@ const App: React.FC = () => {
   };
 
   const deleteTask = (id: string) => {
-    if (confirm('Delete this task?')) {
-      setTasks(tasks.filter(t => t.id !== id));
-    }
+    setTasks(tasks.filter(t => t.id !== id));
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-4 sm:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-              <Target size={24} />
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-[#fcfdfe] text-slate-900'} overflow-x-hidden`}>
+      <header className={`border-b sticky top-0 z-30 px-6 py-2.5 transition-colors ${darkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-md`}>
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+              <Target size={16} strokeWidth={2.5} />
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Ascend</h1>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">Progress Dashboard</p>
-            </div>
+            <h1 className="text-base font-black tracking-tight uppercase">Ascend</h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+          <div className="flex items-center gap-4">
+            <div className="relative group hidden sm:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
               <input
                 type="text"
-                placeholder="Search tasks..."
+                placeholder="Search focus..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-64 transition-all"
+                className={`pl-8 pr-3 py-1 border-none rounded-lg text-xs font-medium focus:ring-1 focus:ring-indigo-500 outline-none w-40 transition-all ${darkMode ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'}`}
               />
             </div>
+            
+            <button 
+              onClick={() => setDarkMode(!darkMode)}
+              className={`p-2 rounded-lg transition-colors ${darkMode ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+
             <button 
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-indigo-700 active:scale-95 transition-all shadow-md shadow-indigo-100"
+              className="bg-indigo-600 text-white px-3.5 py-1.5 rounded-lg font-bold text-[11px] uppercase tracking-wider hover:bg-indigo-700 transition-all flex items-center gap-1 shadow-indigo-100 dark:shadow-none shadow-lg"
             >
-              <Plus size={18} />
-              <span>New Task</span>
+              <Plus size={14} /> New
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="max-w-[1600px] mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* Sidebar / Stats */}
-          <aside className="lg:col-span-4 space-y-6">
-            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center text-center">
-              <h2 className="text-lg font-bold text-slate-800 mb-6">Master Goal</h2>
-              <CircularProgress percentage={overallProgress} size={220} strokeWidth={16} />
-              <div className="mt-8 grid grid-cols-2 gap-4 w-full">
-                <div className="bg-indigo-50 p-4 rounded-2xl">
-                  <span className="block text-2xl font-bold text-indigo-700">{tasks.length}</span>
-                  <span className="text-xs font-medium text-indigo-600 uppercase">Total Tasks</span>
+          {/* Dashboard Analytics Bar */}
+          <aside className="lg:col-span-3 space-y-4">
+            <div className={`p-6 rounded-2xl border shadow-sm flex flex-col items-center transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+              <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Focus Score</h2>
+              <CircularProgress percentage={stats.overall} size={150} strokeWidth={12} darkMode={darkMode} />
+              
+              <div className="mt-8 grid grid-cols-1 gap-2 w-full">
+                <div className={`flex justify-between items-center p-3 rounded-xl transition-colors ${darkMode ? 'bg-slate-800/50' : 'bg-slate-50'}`}>
+                  <div className="flex items-center gap-2">
+                    <ListTodo size={14} className={darkMode ? 'text-slate-500' : 'text-slate-400'} />
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Active</span>
+                  </div>
+                  <span className={`text-sm font-black ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{stats.total}</span>
                 </div>
-                <div className="bg-emerald-50 p-4 rounded-2xl">
-                  <span className="block text-2xl font-bold text-emerald-700">
-                    {tasks.filter(t => t.isCompleted).length}
-                  </span>
-                  <span className="text-xs font-medium text-emerald-600 uppercase">Completed</span>
+                <div className={`flex justify-between items-center p-3 rounded-xl transition-colors ${darkMode ? 'bg-emerald-950/30' : 'bg-emerald-50'}`}>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-emerald-500" />
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Completed</span>
+                  </div>
+                  <span className={`text-sm font-black ${darkMode ? 'text-emerald-400' : 'text-emerald-800'}`}>{stats.completed}</span>
+                </div>
+                <div className={`p-3 border rounded-xl transition-colors ${darkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className={`text-[9px] font-black uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Subtask Integrity</span>
+                    <span className="text-[10px] font-bold text-indigo-400 dark:text-indigo-400">{stats.subtasksCompleted}/{stats.subtasks}</span>
+                  </div>
+                  <div className={`h-1 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-50'}`}>
+                    <div 
+                      className="h-full bg-indigo-500 transition-all duration-700"
+                      style={{ width: `${stats.subtasks > 0 ? (stats.subtasksCompleted / stats.subtasks) * 100 : 0}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 rounded-3xl text-white shadow-xl shadow-indigo-100 overflow-hidden relative">
-              <Sparkles className="absolute -top-4 -right-4 text-white/10 w-32 h-32" />
-              <h3 className="text-lg font-bold mb-2">Smart Breakthrough</h3>
-              <p className="text-sm text-indigo-100 mb-4 leading-relaxed">
-                Use our AI Breakdown tool to instantly split your big goals into manageable subtasks.
-              </p>
-              <button 
-                onClick={() => setShowAddModal(true)}
-                className="bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-semibold px-4 py-2 rounded-lg"
-              >
-                Try AI Breakdown
-              </button>
             </div>
           </aside>
 
-          {/* Tasks Main View */}
-          <div className="lg:col-span-8">
-            <div className="flex items-center justify-between mb-6">
+          {/* High-Density Grid */}
+          <div className="lg:col-span-9">
+            <div className="flex items-center justify-between mb-4 px-1">
               <div className="flex items-center gap-2">
-                <LayoutGrid size={20} className="text-indigo-600" />
-                <h2 className="text-lg font-bold text-slate-800">Tasks Pipeline</h2>
+                <LayoutGrid size={14} className="text-indigo-500" />
+                <h2 className={`text-[11px] font-black uppercase tracking-[0.15em] ${darkMode ? 'text-slate-400' : 'text-slate-800'}`}>Pipeline</h2>
               </div>
               
-              <div className="flex items-center gap-2">
-                <Filter size={16} className="text-slate-400" />
-                <select 
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  className="bg-transparent text-sm font-semibold text-slate-600 outline-none cursor-pointer focus:text-indigo-600"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="progress">Best Progress</option>
-                </select>
+              <div className="flex items-center gap-3">
+                <div className={`flex items-center gap-1.5 px-2 py-1 border rounded-md shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                  <Filter size={11} className="text-slate-500" />
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className={`bg-transparent text-[10px] font-black uppercase tracking-tighter outline-none cursor-pointer ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                  >
+                    <option value="newest" className={darkMode ? 'bg-slate-900' : ''}>Newest</option>
+                    <option value="oldest" className={darkMode ? 'bg-slate-900' : ''}>Oldest</option>
+                    <option value="progress" className={darkMode ? 'bg-slate-900' : ''}>Progress</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 items-start">
               {filteredAndSortedTasks.length > 0 ? (
                 filteredAndSortedTasks.map(task => (
                   <TaskCard 
@@ -202,15 +226,13 @@ const App: React.FC = () => {
                     task={task} 
                     onUpdate={updateTask}
                     onDelete={deleteTask}
+                    darkMode={darkMode}
                   />
                 ))
               ) : (
-                <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                    <Target size={32} />
-                  </div>
-                  <p className="font-medium text-lg text-slate-600">No tasks found</p>
-                  <p className="text-sm">Start your journey by adding a new task!</p>
+                <div className={`col-span-full py-20 flex flex-col items-center justify-center rounded-2xl border border-dashed shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                  <Target size={24} strokeWidth={1} className={`mb-3 ${darkMode ? 'text-slate-800' : 'text-slate-200'}`} />
+                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>Pipeline Empty</p>
                 </div>
               )}
             </div>
@@ -218,68 +240,32 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Add Task Modal */}
+      {/* Compact Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-800">New Task</h2>
-                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
-                  <Plus size={24} className="rotate-45" />
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 dark:bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className={`w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+            <div className="p-6">
+              <h2 className={`text-sm font-black uppercase tracking-wider mb-5 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>Create Task</h2>
               <form onSubmit={addTask} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Title</label>
+                <div className="space-y-1">
+                  <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Title</label>
                   <input
-                    autoFocus
-                    required
-                    type="text"
+                    autoFocus required type="text"
                     value={newTask.title}
                     onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    placeholder="e.g. Redesign Landing Page"
+                    className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-1 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
+                    placeholder="Enter goal name..."
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Description</label>
-                  <textarea
-                    rows={3}
-                    value={newTask.description}
-                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
-                    placeholder="Provide some context..."
-                  />
-                </div>
-                <div className="pt-4 flex gap-3">
-                  <button 
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="flex-1 py-3 text-slate-600 font-semibold hover:bg-slate-100 rounded-xl transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
-                  >
-                    Create Task
-                  </button>
+                <div className="flex gap-2 pt-3">
+                  <button type="button" onClick={() => setShowAddModal(false)} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500 hover:text-slate-400' : 'text-slate-400 hover:text-slate-500'}`}>Cancel</button>
+                  <button type="submit" className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 dark:shadow-none">Create</button>
                 </div>
               </form>
             </div>
           </div>
         </div>
       )}
-
-      {/* Floating Action Button (Mobile Only) */}
-      <button 
-        onClick={() => setShowAddModal(true)}
-        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-indigo-200 active:scale-90 transition-transform z-40"
-      >
-        <Plus size={28} />
-      </button>
     </div>
   );
 };

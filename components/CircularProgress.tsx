@@ -5,12 +5,14 @@ interface CircularProgressProps {
   percentage: number;
   size?: number;
   strokeWidth?: number;
+  darkMode?: boolean;
 }
 
 const CircularProgress: React.FC<CircularProgressProps> = ({ 
   percentage, 
-  size = 200, 
-  strokeWidth = 12 
+  size = 160, 
+  strokeWidth = 10,
+  darkMode = false
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -23,7 +25,6 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
         height={size}
         className="transform -rotate-90"
       >
-        {/* Background Track */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -31,16 +32,14 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
           stroke="currentColor"
           strokeWidth={strokeWidth}
           fill="transparent"
-          className="text-slate-100"
+          className={`transition-colors duration-300 ${darkMode ? 'text-slate-800' : 'text-slate-100'}`}
         />
-        {/* Gradient Definition */}
         <defs>
           <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#818cf8" />
-            <stop offset="100%" stopColor="#c084fc" />
+            <stop offset="0%" stopColor="#6366f1" />
+            <stop offset="100%" stopColor="#a855f7" />
           </linearGradient>
         </defs>
-        {/* Progress Fill */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -50,15 +49,16 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
           strokeDasharray={circumference}
           style={{ 
             strokeDashoffset: offset,
-            transition: 'stroke-dashoffset 0.8s ease-in-out'
+            transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
           strokeLinecap="round"
           fill="transparent"
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-4xl font-bold text-slate-800">{Math.round(percentage)}%</span>
-        <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">Overall</span>
+        <span className={`text-3xl font-bold tracking-tighter transition-colors duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+          {Math.round(percentage)}%
+        </span>
       </div>
     </div>
   );
