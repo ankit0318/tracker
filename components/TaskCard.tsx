@@ -9,9 +9,9 @@ import {
   Plus, 
   Sparkles, 
   Loader2, 
-  Circle, 
   Square, 
-  CheckSquare 
+  CheckSquare,
+  Clock
 } from 'lucide-react';
 import { generateSubtasks } from '../services/geminiService';
 
@@ -19,14 +19,23 @@ interface TaskCardProps {
   task: Task;
   onUpdate: (updatedTask: Task) => void;
   onDelete: (id: string) => void;
+  onStartTimer: (taskId: string, subtaskTitle: string) => void;
   darkMode?: boolean;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, darkMode = false }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTimer, darkMode = false }) => {
   // Subtasks are opened by default
   const [isExpanded, setIsExpanded] = useState(true);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
+  const formatElapsedTime = (seconds?: number) => {
+    if (!seconds || seconds === 0) return '0m';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
 
   const handlePercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
@@ -51,7 +60,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, darkMode 
     const newSub: Subtask = {
       id: crypto.randomUUID(),
       title: title.trim(),
-      isCompleted: false
+      isCompleted: false,
+      timeSpent: 0
     };
     const updatedSubtasks = [...task.subtasks, newSub];
     const completedCount = updatedSubtasks.filter(s => s.isCompleted).length;
@@ -68,7 +78,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, darkMode 
       const newSubs: Subtask[] = suggested.map((s: any) => ({
         id: crypto.randomUUID(),
         title: s.title,
-        isCompleted: false
+        isCompleted: false,
+        timeSpent: 0
       }));
       onUpdate({ ...task, subtasks: [...task.subtasks, ...newSubs] });
       setIsExpanded(true);
@@ -91,11 +102,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, darkMode 
         ? `bg-slate-900 border-slate-800 hover:border-indigo-500/50 ${task.isCompleted ? 'bg-slate-800/40 opacity-80' : ''}` 
         : `bg-white border-slate-200 hover:border-indigo-300 ${task.isCompleted ? 'bg-slate-50/50' : ''}`
     }`}>
-      {/* Header section with Bold White Task Name */}
+      {/* Header section */}
       <div className={`flex items-center gap-2 p-2.5 transition-colors ${
         task.isCompleted 
           ? 'bg-slate-100 dark:bg-slate-800/60' 
-          : 'bg-indigo-600 dark:bg-slate-800'
+          : 'bg-indigo-600'
       }`}>
         <button 
           onClick={toggleTaskCompletion}
@@ -128,7 +139,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, darkMode 
       </div>
 
       <div className="p-2.5 pt-2">
-        {/* Extreme Compact Progress Control */}
+        {/* Total analytics line */}
+        <div className="flex items-center gap-1.5 mb-2.5 opacity-60">
+           <Clock size={10} className="text-indigo-500" />
+           <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+             Total Effort: {formatElapsedTime(task.totalTimeSpent)}
+           </span>
+        </div>
+
+        {/* Progress Control */}
         <div className="relative group/progress">
           <div className="flex justify-between items-center mb-1">
              <div className={`h-1 flex-1 rounded-full overflow-hidden mr-2 transition-colors ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
@@ -150,26 +169,40 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, darkMode 
         </div>
 
         {isExpanded && (
-          <div className={`mt-2 pt-2 border-t space-y-2 animate-in fade-in slide-in-from-top-1 duration-200 ${darkMode ? 'border-slate-800' : 'border-slate-50'}`}>
+          <div className={`mt-3 pt-3 border-t space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 ${darkMode ? 'border-slate-800' : 'border-slate-50'}`}>
             {task.subtasks.map(sub => (
-              <div key={sub.id} className="flex items-center gap-2 py-0.5 group/sub">
-                <button 
-                  onClick={() => toggleSubtask(sub.id)} 
-                  className={`flex-shrink-0 transition-all duration-200 ${sub.isCompleted ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-600 hover:text-indigo-400'}`}
-                >
-                  {sub.isCompleted ? (
-                    <CheckSquare size={13} fill="currentColor" className={`${darkMode ? 'bg-slate-900' : 'bg-white'} rounded-[2px]`} />
-                  ) : (
-                    <Square size={13} />
-                  )}
-                </button>
-                <span className={`text-[11px] leading-tight flex-1 truncate transition-colors duration-200 ${
-                  sub.isCompleted 
-                    ? 'text-slate-400 dark:text-slate-600 line-through' 
-                    : 'text-slate-600 dark:text-slate-400 font-medium'
-                }`}>
-                  {sub.title}
-                </span>
+              <div key={sub.id} className="flex flex-col group/sub">
+                <div className="flex items-center gap-2 py-0.5">
+                  <button 
+                    onClick={() => toggleSubtask(sub.id)} 
+                    className={`flex-shrink-0 transition-all duration-200 ${sub.isCompleted ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-600 hover:text-indigo-400'}`}
+                  >
+                    {sub.isCompleted ? (
+                      <CheckSquare size={13} fill="currentColor" className={`${darkMode ? 'bg-slate-900' : 'bg-white'} rounded-[2px]`} />
+                    ) : (
+                      <Square size={13} />
+                    )}
+                  </button>
+                  <span className={`text-[11px] leading-tight flex-1 truncate transition-colors duration-200 ${
+                    sub.isCompleted 
+                      ? 'text-slate-400 dark:text-slate-600 line-through' 
+                      : 'text-slate-600 dark:text-slate-400 font-medium'
+                  }`}>
+                    {sub.title}
+                  </span>
+                  <button 
+                    onClick={() => onStartTimer(task.id, sub.title)}
+                    className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-indigo-500"
+                    title="Focus Timer"
+                  >
+                    <Clock size={11} />
+                  </button>
+                </div>
+                {sub.timeSpent && sub.timeSpent > 0 && (
+                  <div className="pl-5 flex items-center gap-1 opacity-40">
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Logged: {formatElapsedTime(sub.timeSpent)}</span>
+                  </div>
+                )}
               </div>
             ))}
             <div className="flex items-center gap-1 mt-1">

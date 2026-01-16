@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Task, SortOption } from './types';
 import CircularProgress from './components/CircularProgress';
 import TaskCard from './components/TaskCard';
+import TimerOverlay from './components/TimerOverlay';
 import { Plus, LayoutGrid, Search, Target, Filter, CheckCircle, ListTodo, Sun, Moon } from 'lucide-react';
 
 const INITIAL_TASKS: Task[] = [
@@ -13,11 +14,12 @@ const INITIAL_TASKS: Task[] = [
     percentage: 85,
     isCompleted: false,
     subtasks: [
-      { id: 's1', title: 'User research', isCompleted: true },
-      { id: 's2', title: 'Wireframes', isCompleted: true },
-      { id: 's3', title: 'Visual identity', isCompleted: false },
+      { id: 's1', title: 'User research', isCompleted: true, timeSpent: 1200 },
+      { id: 's2', title: 'Wireframes', isCompleted: true, timeSpent: 1800 },
+      { id: 's3', title: 'Visual identity', isCompleted: false, timeSpent: 600 },
     ],
     createdAt: Date.now() - 86400000 * 2,
+    totalTimeSpent: 3600
   },
   {
     id: '2',
@@ -26,16 +28,17 @@ const INITIAL_TASKS: Task[] = [
     percentage: 50,
     isCompleted: false,
     subtasks: [
-      { id: 's4', title: 'Transitions', isCompleted: true },
-      { id: 's5', title: 'Hover states', isCompleted: false },
+      { id: 's4', title: 'Transitions', isCompleted: true, timeSpent: 1000 },
+      { id: 's5', title: 'Hover states', isCompleted: false, timeSpent: 800 },
     ],
     createdAt: Date.now() - 86400000,
+    totalTimeSpent: 1800
   }
 ];
 
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('ascend_tasks_final');
+    const saved = localStorage.getItem('ascend_tasks_timer_v2');
     return saved ? JSON.parse(saved) : INITIAL_TASKS;
   });
   const [darkMode, setDarkMode] = useState(() => {
@@ -46,9 +49,12 @@ const App: React.FC = () => {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '' });
+  
+  // Timer State
+  const [activeTimer, setActiveTimer] = useState<{ taskId: string; subtaskTitle: string } | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('ascend_tasks_final', JSON.stringify(tasks));
+    localStorage.setItem('ascend_tasks_timer_v2', JSON.stringify(tasks));
   }, [tasks]);
 
   useEffect(() => {
@@ -99,6 +105,7 @@ const App: React.FC = () => {
       isCompleted: false,
       subtasks: [],
       createdAt: Date.now(),
+      totalTimeSpent: 0
     };
     setTasks([task, ...tasks]);
     setNewTask({ title: '', description: '' });
@@ -111,6 +118,28 @@ const App: React.FC = () => {
 
   const deleteTask = (id: string) => {
     setTasks(tasks.filter(t => t.id !== id));
+  };
+
+  const recordTime = (elapsed: number) => {
+    if (!activeTimer) return;
+    setTasks(tasks.map(t => {
+      if (t.id === activeTimer.taskId) {
+        // Update subtask time if found
+        const updatedSubtasks = t.subtasks.map(s => {
+          if (s.title === activeTimer.subtaskTitle) {
+            return { ...s, timeSpent: (s.timeSpent || 0) + elapsed };
+          }
+          return s;
+        });
+        return { 
+          ...t, 
+          subtasks: updatedSubtasks,
+          totalTimeSpent: (t.totalTimeSpent || 0) + elapsed 
+        };
+      }
+      return t;
+    }));
+    setActiveTimer(null);
   };
 
   return (
@@ -226,6 +255,7 @@ const App: React.FC = () => {
                     task={task} 
                     onUpdate={updateTask}
                     onDelete={deleteTask}
+                    onStartTimer={(taskId, subtaskTitle) => setActiveTimer({ taskId, subtaskTitle })}
                     darkMode={darkMode}
                   />
                 ))
@@ -239,6 +269,16 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Timer Overlay */}
+      {activeTimer && (
+        <TimerOverlay 
+          subtaskTitle={activeTimer.subtaskTitle}
+          darkMode={darkMode}
+          onClose={() => setActiveTimer(null)}
+          onComplete={recordTime}
+        />
+      )}
 
       {/* Compact Add Modal */}
       {showAddModal && (
@@ -258,7 +298,7 @@ const App: React.FC = () => {
                   />
                 </div>
                 <div className="flex gap-2 pt-3">
-                  <button type="button" onClick={() => setShowAddModal(false)} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500 hover:text-slate-400' : 'text-slate-400 hover:text-slate-500'}`}>Cancel</button>
+                  <button type="button" onClick={() => setShowAddModal(false)} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-50 hover:text-slate-400' : 'text-slate-400 hover:text-slate-500'}`}>Cancel</button>
                   <button type="submit" className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 dark:shadow-none">Create</button>
                 </div>
               </form>
