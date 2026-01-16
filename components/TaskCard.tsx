@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Task, Subtask } from '../types';
 import { 
   CheckCircle2, 
@@ -10,7 +10,8 @@ import {
   Square, 
   CheckSquare,
   Clock,
-  CircleDashed
+  CircleDashed,
+  Edit2
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -26,8 +27,17 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [editingSubtaskProgress, setEditingSubtaskProgress] = useState<string | null>(null);
   
+  // Inline editing states
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(task.title);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [tempSubtaskTitle, setTempSubtaskTitle] = useState('');
+
   const [lastCompletedId, setLastCompletedId] = useState<string | null>(null);
   const [justFinishedTask, setJustFinishedTask] = useState(false);
+
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const subtaskInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (task.percentage === 100 && !justFinishedTask) {
@@ -36,6 +46,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
       return () => clearTimeout(timer);
     }
   }, [task.percentage]);
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+    }
+  }, [isEditingTitle]);
+
+  useEffect(() => {
+    if (editingSubtaskId && subtaskInputRef.current) {
+      subtaskInputRef.current.focus();
+    }
+  }, [editingSubtaskId]);
 
   const formatElapsedTime = (seconds?: number) => {
     if (!seconds || seconds === 0) return '0m';
@@ -75,6 +97,30 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
       percentage: nextStatus ? 100 : 0,
       subtasks: updatedSubs
     });
+  };
+
+  const handleTitleUpdate = () => {
+    if (tempTitle.trim() && tempTitle !== task.title) {
+      onUpdate({ ...task, title: tempTitle.trim() });
+    } else {
+      setTempTitle(task.title);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleSubtaskTitleUpdate = (subId: string) => {
+    if (tempSubtaskTitle.trim()) {
+      const updatedSubtasks = task.subtasks.map(s => 
+        s.id === subId ? { ...s, title: tempSubtaskTitle.trim() } : s
+      );
+      onUpdate({ ...task, subtasks: updatedSubtasks });
+    }
+    setEditingSubtaskId(null);
+  };
+
+  const startEditingSubtask = (sub: Subtask) => {
+    setEditingSubtaskId(sub.id);
+    setTempSubtaskTitle(sub.title);
   };
 
   const addSubtask = (title: string) => {
@@ -140,14 +186,28 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
           <CheckCircle2 size={18} fill={task.isCompleted ? 'currentColor' : 'transparent'} />
         </button>
         
-        <div className="min-w-0 flex-1">
-          <h3 className={`text-[13px] font-bold truncate transition-all duration-500 ${
-            task.isCompleted 
-              ? 'text-emerald-600 dark:text-emerald-400 opacity-80' 
-              : 'text-white'
-          } ${task.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
-            {task.title}
-          </h3>
+        <div className="min-w-0 flex-1 relative group/title">
+          {isEditingTitle ? (
+            <input
+              ref={titleInputRef}
+              value={tempTitle}
+              onChange={(e) => setTempTitle(e.target.value)}
+              onBlur={handleTitleUpdate}
+              onKeyDown={(e) => e.key === 'Enter' && handleTitleUpdate()}
+              className="w-full bg-white/10 text-white text-[13px] font-bold px-1 rounded outline-none ring-1 ring-white/30"
+            />
+          ) : (
+            <div className="flex items-center gap-1 cursor-text" onClick={() => setIsEditingTitle(true)}>
+              <h3 className={`text-[13px] font-bold truncate transition-all duration-500 ${
+                task.isCompleted 
+                  ? 'text-emerald-600 dark:text-emerald-400 opacity-80' 
+                  : 'text-white'
+              } ${task.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
+                {task.title}
+              </h3>
+              <Edit2 size={10} className="text-white/20 group-hover/title:opacity-100 opacity-0 transition-opacity" />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -207,13 +267,30 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                       <Square size={13} />
                     )}
                   </button>
-                  <span className={`text-[11px] leading-tight flex-1 truncate transition-all duration-500 ${
-                    sub.isCompleted 
-                      ? 'text-emerald-600/60 dark:text-emerald-400/40' 
-                      : 'text-slate-600 dark:text-slate-400 font-medium'
-                  } ${sub.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
-                    {sub.title}
-                  </span>
+                  
+                  <div className="flex-1 min-w-0 group/subtext">
+                    {editingSubtaskId === sub.id ? (
+                      <input
+                        ref={subtaskInputRef}
+                        value={tempSubtaskTitle}
+                        onChange={(e) => setTempSubtaskTitle(e.target.value)}
+                        onBlur={() => handleSubtaskTitleUpdate(sub.id)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSubtaskTitleUpdate(sub.id)}
+                        className={`w-full text-[11px] px-1 rounded outline-none ring-1 ${darkMode ? 'bg-slate-800 text-white ring-indigo-500/50' : 'bg-slate-50 text-slate-800 ring-indigo-200'}`}
+                      />
+                    ) : (
+                      <div className="flex items-center gap-1 cursor-text" onClick={() => startEditingSubtask(sub)}>
+                        <span className={`text-[11px] leading-tight truncate transition-all duration-500 ${
+                          sub.isCompleted 
+                            ? 'text-emerald-600/60 dark:text-emerald-400/40' 
+                            : 'text-slate-600 dark:text-slate-400 font-medium'
+                        } ${sub.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
+                          {sub.title}
+                        </span>
+                        <Edit2 size={8} className="text-slate-400 opacity-0 group-hover/subtext:opacity-100 transition-opacity" />
+                      </div>
+                    )}
+                  </div>
                   
                   <div className="flex items-center gap-1">
                     <button 
