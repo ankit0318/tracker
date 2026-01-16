@@ -7,15 +7,11 @@ import {
   ChevronUp, 
   Trash2, 
   Plus, 
-  Sparkles, 
-  Loader2, 
   Square, 
   CheckSquare,
   Clock,
-  CircleDashed,
-  GripVertical
+  CircleDashed
 } from 'lucide-react';
-import { generateSubtasks } from '../services/geminiService';
 
 interface TaskCardProps {
   task: Task;
@@ -27,7 +23,6 @@ interface TaskCardProps {
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTimer, darkMode = false }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [editingSubtaskProgress, setEditingSubtaskProgress] = useState<string | null>(null);
   
@@ -72,7 +67,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
       setTimeout(() => setLastCompletedId(null), 500);
     }
     
-    // Update subtasks to match task completion if desired, or just the task
     const updatedSubs = task.subtasks.map(s => ({ ...s, isCompleted: nextStatus, percentage: nextStatus ? 100 : 0 }));
 
     onUpdate({
@@ -97,24 +91,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
 
     onUpdate({ ...task, subtasks: updatedSubtasks, percentage: autoPercent, isCompleted: autoPercent === 100 });
     setNewSubtaskTitle('');
-  };
-
-  const handleAiBreakdown = async () => {
-    setIsAiLoading(true);
-    const suggested = await generateSubtasks(task.title, task.description);
-    if (suggested.length > 0) {
-      const newSubs: Subtask[] = suggested.map((s: any) => ({
-        id: crypto.randomUUID(),
-        title: s.title,
-        isCompleted: false,
-        percentage: 0,
-        timeSpent: 0
-      }));
-      const combined = [...task.subtasks, ...newSubs];
-      onUpdate({ ...task, subtasks: combined, percentage: calculateAutoPercentage(combined) });
-      setIsExpanded(true);
-    }
-    setIsAiLoading(false);
   };
 
   const toggleSubtask = (subId: string) => {
@@ -150,7 +126,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
         ? `bg-slate-900 border-slate-800 hover:border-indigo-500/50 ${task.isCompleted ? 'bg-slate-800/40 opacity-95' : ''}` 
         : `bg-white border-slate-200 hover:border-indigo-300 ${task.isCompleted ? 'bg-slate-50/50' : ''}`
     }`}>
-      {/* Header section */}
       <div className={`flex items-center gap-2 p-2.5 transition-all duration-500 ${
         task.isCompleted 
           ? 'bg-emerald-500/10 dark:bg-emerald-950/40' 
@@ -176,11 +151,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
         </div>
 
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {!task.isCompleted && (
-            <button onClick={handleAiBreakdown} disabled={isAiLoading} title="AI Breakdown" className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded">
-              {isAiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-            </button>
-          )}
           <button onClick={() => onDelete(task.id)} title="Delete" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-red-500 hover:bg-red-500/10' : 'text-white/60 hover:text-red-300 hover:bg-white/10'}`}>
             <Trash2 size={13} />
           </button>
@@ -245,7 +215,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                     {sub.title}
                   </span>
                   
-                  {/* Granular Progress Selector Button */}
                   <div className="flex items-center gap-1">
                     <button 
                       onClick={() => setEditingSubtaskProgress(editingSubtaskProgress === sub.id ? null : sub.id)}
@@ -257,7 +226,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                       title="Set Progress"
                     >
                       <CircleDashed size={11} />
-                      {/* FIXED: Explicitly check percentage > 0 to avoid rendering the number 0 */}
                       {(sub.percentage ?? 0) > 0 && sub.percentage! < 100 && (
                         <span className="text-[9px] font-bold">{sub.percentage}%</span>
                       )}
@@ -275,7 +243,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                   </div>
                 </div>
 
-                {/* Inline Progress Adjuster */}
                 {editingSubtaskProgress === sub.id && (
                   <div className="pl-5 pb-2 pt-1 animate-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center gap-3">
@@ -293,7 +260,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                   </div>
                 )}
 
-                {/* FIXED: Explicitly check timeSpent > 0 to avoid rendering the number 0 */}
                 {(sub.timeSpent ?? 0) > 0 && (
                   <div className="pl-5 flex items-center gap-1 opacity-40">
                     <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Logged: {formatElapsedTime(sub.timeSpent)}</span>
