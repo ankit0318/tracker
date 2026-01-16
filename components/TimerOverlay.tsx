@@ -10,7 +10,14 @@ interface TimerOverlayProps {
 }
 
 const MOTIVATIONAL_QUOTES = [
- 
+  "Focus on the step, not the mountain.",
+  "Consistency is the companion of success.",
+  "Your future self will thank you.",
+  "One thing at a time.",
+  "Deep work, great results.",
+  "Progress over perfection.",
+  "Quiet the mind and the soul will speak.",
+  "The secret of getting ahead is getting started."
 ];
 
 const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onComplete, darkMode }) => {
@@ -77,13 +84,13 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
   };
 
   // Quote cycling effect
-  // useEffect(() => {
-  //   if (!isStarted) return;
-  //   const interval = setInterval(() => {
-  //     setQuoteIndex((prev) => (prev + 1) % MOTIVATIONAL_QUOTES.length);
-  //   }, 20000); // Change quote every 20 seconds
-  //   return () => clearInterval(interval);
-  // }, [isStarted]);
+  useEffect(() => {
+    if (!isStarted) return;
+    const interval = setInterval(() => {
+      setQuoteIndex((prev) => (prev + 1) % MOTIVATIONAL_QUOTES.length);
+    }, 20000); // Change quote every 20 seconds
+    return () => clearInterval(interval);
+  }, [isStarted]);
 
   useEffect(() => {
     if (isActive && !isPaused && timeLeft > 0) {
@@ -204,11 +211,11 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
       </div>
 
       {/* Motivational Quote Display */}
-      {/* <div className="h-12 mb-8 flex items-center justify-center px-6">
+      <div className="h-12 mb-8 flex items-center justify-center px-6">
         <p key={quoteIndex} className="text-sm font-light italic opacity-60 text-center tracking-wide animate-in fade-in slide-in-from-bottom-2 duration-1000">
           "{MOTIVATIONAL_QUOTES[quoteIndex]}"
         </p>
-      </div> */}
+      </div>
 
       <div className="flex items-center gap-8">
         <button 
