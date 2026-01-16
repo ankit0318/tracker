@@ -3,6 +3,7 @@ export interface Subtask {
   id: string;
   title: string;
   isCompleted: boolean;
+  percentage?: number; // 0-100 granular progress
   timeSpent?: number; // Seconds spent on this subtask
 }
 

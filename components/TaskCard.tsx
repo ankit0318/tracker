@@ -11,7 +11,9 @@ import {
   Loader2, 
   Square, 
   CheckSquare,
-  Clock
+  Clock,
+  CircleDashed,
+  GripVertical
 } from 'lucide-react';
 import { generateSubtasks } from '../services/geminiService';
 
@@ -27,6 +29,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
   const [isExpanded, setIsExpanded] = useState(true);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [editingSubtaskProgress, setEditingSubtaskProgress] = useState<string | null>(null);
   
   const [lastCompletedId, setLastCompletedId] = useState<string | null>(null);
   const [justFinishedTask, setJustFinishedTask] = useState(false);
@@ -47,6 +50,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
     return `${m}m`;
   };
 
+  const calculateAutoPercentage = (subs: Subtask[]) => {
+    if (subs.length === 0) return 0;
+    const total = subs.reduce((acc, s) => acc + (s.percentage || (s.isCompleted ? 100 : 0)), 0);
+    return Math.round(total / subs.length);
+  };
+
   const handlePercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
     onUpdate({ 
@@ -62,10 +71,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
       setLastCompletedId(task.id);
       setTimeout(() => setLastCompletedId(null), 500);
     }
+    
+    // Update subtasks to match task completion if desired, or just the task
+    const updatedSubs = task.subtasks.map(s => ({ ...s, isCompleted: nextStatus, percentage: nextStatus ? 100 : 0 }));
+
     onUpdate({
       ...task,
       isCompleted: nextStatus,
-      percentage: nextStatus ? 100 : (task.percentage === 100 ? 0 : task.percentage)
+      percentage: nextStatus ? 100 : 0,
+      subtasks: updatedSubs
     });
   };
 
@@ -75,13 +89,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
       id: crypto.randomUUID(),
       title: title.trim(),
       isCompleted: false,
+      percentage: 0,
       timeSpent: 0
     };
     const updatedSubtasks = [...task.subtasks, newSub];
-    const completedCount = updatedSubtasks.filter(s => s.isCompleted).length;
-    const autoPercent = Math.round((completedCount / updatedSubtasks.length) * 100);
+    const autoPercent = calculateAutoPercentage(updatedSubtasks);
 
-    onUpdate({ ...task, subtasks: updatedSubtasks, percentage: autoPercent });
+    onUpdate({ ...task, subtasks: updatedSubtasks, percentage: autoPercent, isCompleted: autoPercent === 100 });
     setNewSubtaskTitle('');
   };
 
@@ -93,9 +107,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
         id: crypto.randomUUID(),
         title: s.title,
         isCompleted: false,
+        percentage: 0,
         timeSpent: 0
       }));
-      onUpdate({ ...task, subtasks: [...task.subtasks, ...newSubs] });
+      const combined = [...task.subtasks, ...newSubs];
+      onUpdate({ ...task, subtasks: combined, percentage: calculateAutoPercentage(combined) });
       setIsExpanded(true);
     }
     setIsAiLoading(false);
@@ -103,16 +119,26 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
 
   const toggleSubtask = (subId: string) => {
     const subtask = task.subtasks.find(s => s.id === subId);
-    if (subtask && !subtask.isCompleted) {
+    if (!subtask) return;
+    
+    const nextCompleted = !subtask.isCompleted;
+    if (nextCompleted) {
       setLastCompletedId(subId);
       setTimeout(() => setLastCompletedId(null), 500);
     }
     
     const updatedSubtasks = task.subtasks.map(s => 
-      s.id === subId ? { ...s, isCompleted: !s.isCompleted } : s
+      s.id === subId ? { ...s, isCompleted: nextCompleted, percentage: nextCompleted ? 100 : 0 } : s
     );
-    const completedCount = updatedSubtasks.filter(s => s.isCompleted).length;
-    const autoPercent = Math.round((completedCount / updatedSubtasks.length) * 100);
+    const autoPercent = calculateAutoPercentage(updatedSubtasks);
+    onUpdate({ ...task, subtasks: updatedSubtasks, percentage: autoPercent, isCompleted: autoPercent === 100 });
+  };
+
+  const updateSubtaskPercentage = (subId: string, value: number) => {
+    const updatedSubtasks = task.subtasks.map(s => 
+      s.id === subId ? { ...s, percentage: value, isCompleted: value === 100 } : s
+    );
+    const autoPercent = calculateAutoPercentage(updatedSubtasks);
     onUpdate({ ...task, subtasks: updatedSubtasks, percentage: autoPercent, isCompleted: autoPercent === 100 });
   };
 
@@ -124,7 +150,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
         ? `bg-slate-900 border-slate-800 hover:border-indigo-500/50 ${task.isCompleted ? 'bg-slate-800/40 opacity-95' : ''}` 
         : `bg-white border-slate-200 hover:border-indigo-300 ${task.isCompleted ? 'bg-slate-50/50' : ''}`
     }`}>
-      {/* Header section - FIXED: Improved completed state background */}
+      {/* Header section */}
       <div className={`flex items-center gap-2 p-2.5 transition-all duration-500 ${
         task.isCompleted 
           ? 'bg-emerald-500/10 dark:bg-emerald-950/40' 
@@ -218,17 +244,57 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                   } ${sub.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
                     {sub.title}
                   </span>
-                  {!sub.isCompleted && (
+                  
+                  {/* Granular Progress Selector Button */}
+                  <div className="flex items-center gap-1">
                     <button 
-                      onClick={() => onStartTimer(task.id, sub.title)}
-                      className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-indigo-500"
-                      title="Focus Timer"
+                      onClick={() => setEditingSubtaskProgress(editingSubtaskProgress === sub.id ? null : sub.id)}
+                      className={`p-1 transition-all rounded-md flex items-center gap-1 ${
+                        sub.percentage && sub.percentage > 0 && !sub.isCompleted 
+                        ? 'text-indigo-500 bg-indigo-500/10' 
+                        : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                      title="Set Progress"
                     >
-                      <Clock size={11} />
+                      <CircleDashed size={11} />
+                      {/* FIXED: Explicitly check percentage > 0 to avoid rendering the number 0 */}
+                      {(sub.percentage ?? 0) > 0 && sub.percentage! < 100 && (
+                        <span className="text-[9px] font-bold">{sub.percentage}%</span>
+                      )}
                     </button>
-                  )}
+
+                    {!sub.isCompleted && (
+                      <button 
+                        onClick={() => onStartTimer(task.id, sub.title)}
+                        className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-indigo-500"
+                        title="Focus Timer"
+                      >
+                        <Clock size={11} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {sub.timeSpent && sub.timeSpent > 0 && (
+
+                {/* Inline Progress Adjuster */}
+                {editingSubtaskProgress === sub.id && (
+                  <div className="pl-5 pb-2 pt-1 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={sub.percentage || 0}
+                        onChange={(e) => updateSubtaskPercentage(sub.id, parseInt(e.target.value))}
+                        className={`flex-1 h-1 rounded-lg appearance-none cursor-pointer accent-indigo-500 ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}
+                      />
+                      <span className="text-[10px] font-black text-indigo-500 w-8">{sub.percentage || 0}%</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* FIXED: Explicitly check timeSpent > 0 to avoid rendering the number 0 */}
+                {(sub.timeSpent ?? 0) > 0 && (
                   <div className="pl-5 flex items-center gap-1 opacity-40">
                     <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Logged: {formatElapsedTime(sub.timeSpent)}</span>
                   </div>

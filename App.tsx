@@ -27,9 +27,9 @@ const INITIAL_TASKS: Task[] = [
     percentage: 85,
     isCompleted: false,
     subtasks: [
-      { id: 's1', title: 'User research', isCompleted: true, timeSpent: 1200 },
-      { id: 's2', title: 'Wireframes', isCompleted: true, timeSpent: 1800 },
-      { id: 's3', title: 'Visual identity', isCompleted: false, timeSpent: 600 },
+      { id: 's1', title: 'User research', isCompleted: true, percentage: 100, timeSpent: 1200 },
+      { id: 's2', title: 'Wireframes', isCompleted: true, percentage: 100, timeSpent: 1800 },
+      { id: 's3', title: 'Visual identity', isCompleted: false, percentage: 55, timeSpent: 600 },
     ],
     createdAt: Date.now() - 86400000 * 2,
     totalTimeSpent: 3600
@@ -41,8 +41,8 @@ const INITIAL_TASKS: Task[] = [
     percentage: 50,
     isCompleted: false,
     subtasks: [
-      { id: 's4', title: 'Transitions', isCompleted: true, timeSpent: 1000 },
-      { id: 's5', title: 'Hover states', isCompleted: false, timeSpent: 800 },
+      { id: 's4', title: 'Transitions', isCompleted: true, percentage: 100, timeSpent: 1000 },
+      { id: 's5', title: 'Hover states', isCompleted: false, percentage: 0, timeSpent: 800 },
     ],
     createdAt: Date.now() - 86400000,
     totalTimeSpent: 1800
@@ -51,12 +51,11 @@ const INITIAL_TASKS: Task[] = [
 
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('ascend_tasks_timer_v2');
+    const saved = localStorage.getItem('ascend_tasks_timer_v3');
     return saved ? JSON.parse(saved) : INITIAL_TASKS;
   });
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('ascend_theme');
-    // Default to dark mode if no preference is saved
     return saved === null ? true : saved === 'dark';
   });
   const [search, setSearch] = useState('');
@@ -64,11 +63,10 @@ const App: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '' });
   
-  // Timer State
   const [activeTimer, setActiveTimer] = useState<{ taskId: string; subtaskTitle: string } | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('ascend_tasks_timer_v2', JSON.stringify(tasks));
+    localStorage.setItem('ascend_tasks_timer_v3', JSON.stringify(tasks));
   }, [tasks]);
 
   useEffect(() => {
@@ -147,7 +145,6 @@ const App: React.FC = () => {
     if (!activeTimer) return;
     setTasks(tasks.map(t => {
       if (t.id === activeTimer.taskId) {
-        // Update subtask time if found
         const updatedSubtasks = t.subtasks.map(s => {
           if (s.title === activeTimer.subtaskTitle) {
             return { ...s, timeSpent: (s.timeSpent || 0) + elapsed };
@@ -208,10 +205,7 @@ const App: React.FC = () => {
 
       <main className="max-w-[1600px] mx-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Dashboard Analytics Bar */}
           <aside className="lg:col-span-3 space-y-4">
-            {/* Progress Card */}
             <div className={`p-6 rounded-2xl border shadow-sm flex flex-col items-center transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
               <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Focus Score</h2>
               <CircularProgress percentage={stats.overall} size={150} strokeWidth={12} darkMode={darkMode} />
@@ -231,31 +225,16 @@ const App: React.FC = () => {
                   </div>
                   <span className={`text-sm font-black ${darkMode ? 'text-emerald-400' : 'text-emerald-800'}`}>{stats.completed}</span>
                 </div>
-                <div className={`p-3 border rounded-xl transition-colors ${darkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className={`text-[9px] font-black uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Subtask Integrity</span>
-                    <span className="text-[10px] font-bold text-indigo-400 dark:text-indigo-400">{stats.subtasksCompleted}/{stats.subtasks}</span>
-                  </div>
-                  <div className={`h-1 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-50'}`}>
-                    <div 
-                      className="h-full bg-indigo-500 transition-all duration-700"
-                      style={{ width: `${stats.subtasks > 0 ? (stats.subtasksCompleted / stats.subtasks) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Time Analytics Card */}
             <div className={`p-5 rounded-2xl border shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <BarChart3 size={14} className="text-indigo-500" />
                   <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Analysis</h2>
                 </div>
-                <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>Today</div>
               </div>
-
               <div className="mb-6">
                 <div className="flex items-baseline gap-1.5 mb-1">
                   <span className={`text-3xl font-light tracking-tighter ${darkMode ? 'text-white' : 'text-slate-800'}`}>
@@ -263,53 +242,16 @@ const App: React.FC = () => {
                   </span>
                   <span className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Total Focus</span>
                 </div>
-                <div className={`h-1 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                  <div className="h-full bg-indigo-500 animate-pulse" style={{ width: '100%' }} />
-                </div>
               </div>
-
-              <div className="space-y-4">
-                <h3 className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>Breakdown</h3>
-                {tasks.filter(t => (t.totalTimeSpent || 0) > 0).length > 0 ? (
-                  tasks.filter(t => (t.totalTimeSpent || 0) > 0).map(t => (
-                    <div key={t.id} className="flex items-center justify-between group cursor-default">
-                      <div className="flex flex-col min-w-0">
-                        <span className={`text-[11px] font-medium truncate ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t.title}</span>
-                        <div className="flex items-center gap-1">
-                           <div className={`w-1.5 h-1.5 rounded-full ${t.isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
-                           <span className={`text-[9px] font-bold ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>{t.percentage}% done</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`text-[11px] font-black tabular-nums ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                          {formatTimeFull(t.totalTimeSpent || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-2 text-center border border-dashed rounded-xl border-slate-200 dark:border-slate-800">
-                    <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-700' : 'text-slate-500'}`}>No logs today</p>
-                  </div>
-                )}
-              </div>
-
-              <button className={`w-full mt-6 py-2.5 rounded-xl border border-dashed text-[9px] font-black uppercase tracking-widest transition-all ${
-                darkMode ? 'border-slate-800 text-slate-500 hover:text-slate-400 hover:bg-slate-800/50' : 'border-slate-200 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50'
-              }`}>
-                Export Insights
-              </button>
             </div>
           </aside>
 
-          {/* High-Density Grid */}
           <div className="lg:col-span-9">
             <div className="flex items-center justify-between mb-4 px-1">
               <div className="flex items-center gap-2">
                 <LayoutGrid size={14} className="text-indigo-500" />
                 <h2 className={`text-[11px] font-black uppercase tracking-[0.15em] ${darkMode ? 'text-slate-400' : 'text-slate-800'}`}>Pipeline</h2>
               </div>
-              
               <div className="flex items-center gap-3">
                 <div className={`flex items-center gap-1.5 px-2 py-1 border rounded-md shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
                   <Filter size={11} className="text-slate-500" />
@@ -349,7 +291,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Timer Overlay */}
       {activeTimer && (
         <TimerOverlay 
           subtaskTitle={activeTimer.subtaskTitle}
@@ -359,7 +300,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Compact Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 dark:bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
           <div className={`w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
