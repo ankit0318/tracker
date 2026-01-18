@@ -114,7 +114,7 @@ const App: React.FC = () => {
         
         // Buffer: 2 minutes (120000ms). Drift Alert: 20 minutes (1200000ms)
         const DRIFT_BUFFER = 2 * 60 * 1000;
-        const DRIFT_ALERT_THRESHOLD = 15 * 60 * 1000;
+        const DRIFT_ALERT_THRESHOLD = 10 * 60 * 1000;
 
         // If we are past the buffer + threshold, show alert
         if (timeSinceLastActive > (DRIFT_BUFFER + DRIFT_ALERT_THRESHOLD) && !showDriftAlert) {

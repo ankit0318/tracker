@@ -23,7 +23,7 @@ const DriftAlert: React.FC<DriftAlertProps> = ({ onStartBreak, onDismiss, darkMo
           
           <div>
             <h3 className={`text-lg font-bold mb-1 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-              You've been drifting for over 15 minutes.
+              You've been drifting for over 10 minutes.
             </h3>
             <p className={`text-xs leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                Want to make it an official break?
