@@ -543,6 +543,7 @@ const App: React.FC = () => {
         isOpen={showAnalytics}
         onClose={() => setShowAnalytics(false)}
         tasks={tasks}
+        activityHistory={activityHistory}
         darkMode={darkMode}
       />
 
