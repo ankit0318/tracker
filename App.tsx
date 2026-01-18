@@ -1,9 +1,12 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Task, SortOption } from './types';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Task, SortOption, ActivityType, ActivitySession } from './types';
 import CircularProgress from './components/CircularProgress';
 import TaskCard from './components/TaskCard';
 import TimerOverlay from './components/TimerOverlay';
+import AnalyticsModal from './components/AnalyticsModal';
+import FloatingTimer from './components/FloatingTimer';
+import DriftAlert from './components/DriftAlert';
 import { 
   Plus, 
   LayoutGrid, 
@@ -16,7 +19,10 @@ import {
   Moon,
   Clock,
   BarChart3,
-  ChevronRight
+  ChevronRight,
+  Utensils, 
+  Coffee, 
+  Armchair
 } from 'lucide-react';
 
 const INITIAL_TASKS: Task[] = [
@@ -54,6 +60,20 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('ascend_tasks_timer_v3');
     return saved ? JSON.parse(saved) : INITIAL_TASKS;
   });
+  
+  // Activities (Food, Nap, etc.) and Drift
+  const [activityHistory, setActivityHistory] = useState<ActivitySession[]>(() => {
+    const saved = localStorage.getItem('ascend_activities');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [currentActivity, setCurrentActivity] = useState<{ type: ActivityType; startTime: number } | null>(null);
+  
+  // Track when the last activity (Task OR Wellness) ended. 
+  // Initialized to now so drift doesn't start immediately on page load.
+  const [lastActivityEndTime, setLastActivityEndTime] = useState<number>(Date.now());
+  const [showDriftAlert, setShowDriftAlert] = useState(false);
+
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('ascend_theme');
     return saved === null ? true : saved === 'dark';
@@ -64,10 +84,16 @@ const App: React.FC = () => {
   const [newTask, setNewTask] = useState({ title: '', description: '' });
   
   const [activeTimer, setActiveTimer] = useState<{ taskId: string; subtaskTitle: string } | null>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
+  // Persistence
   useEffect(() => {
     localStorage.setItem('ascend_tasks_timer_v3', JSON.stringify(tasks));
   }, [tasks]);
+
+  useEffect(() => {
+    localStorage.setItem('ascend_activities', JSON.stringify(activityHistory));
+  }, [activityHistory]);
 
   useEffect(() => {
     localStorage.setItem('ascend_theme', darkMode ? 'dark' : 'light');
@@ -77,6 +103,89 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Drift Logic
+  useEffect(() => {
+    const driftInterval = setInterval(() => {
+      // If no task timer AND no wellness activity is running
+      if (!activeTimer && !currentActivity) {
+        const now = Date.now();
+        const timeSinceLastActive = now - lastActivityEndTime;
+        
+        // Buffer: 2 minutes (120000ms). Drift Alert: 20 minutes (1200000ms)
+        const DRIFT_BUFFER = 2 * 60 * 1000;
+        const DRIFT_ALERT_THRESHOLD = 15 * 60 * 1000;
+
+        // If we are past the buffer + threshold, show alert
+        if (timeSinceLastActive > (DRIFT_BUFFER + DRIFT_ALERT_THRESHOLD) && !showDriftAlert) {
+          setShowDriftAlert(true);
+        }
+      } else {
+        // If we are active, ensure alert is hidden
+        if (showDriftAlert) setShowDriftAlert(false);
+        // Keep updating lastActivityEndTime while active to prevent immediate drift on stop
+        setLastActivityEndTime(Date.now());
+      }
+    }, 1000);
+
+    return () => clearInterval(driftInterval);
+  }, [activeTimer, currentActivity, lastActivityEndTime, showDriftAlert]);
+
+  // Helper: Record any background drift before starting a new activity
+  const captureDrift = (startTimeOfNewActivity: number) => {
+    const DRIFT_BUFFER = 2 * 60 * 1000;
+    const timeSinceLast = startTimeOfNewActivity - lastActivityEndTime;
+
+    // Only record drift if it exceeds the buffer significantly (e.g., > 1 minute past buffer)
+    if (timeSinceLast > DRIFT_BUFFER + 60000) {
+      const driftDuration = Math.floor((timeSinceLast - DRIFT_BUFFER) / 1000);
+      const driftSession: ActivitySession = {
+        id: crypto.randomUUID(),
+        type: 'drift',
+        startTime: lastActivityEndTime + DRIFT_BUFFER,
+        endTime: startTimeOfNewActivity,
+        duration: driftDuration
+      };
+      setActivityHistory(prev => [...prev, driftSession]);
+    }
+  };
+
+  const startDedicatedActivity = (type: ActivityType) => {
+    if (activeTimer) return; // Don't start if task timer running
+    if (currentActivity) return; // Don't start if another wellness activity running
+
+    const now = Date.now();
+    captureDrift(now); // Check if we drifted before starting this
+    setCurrentActivity({ type, startTime: now });
+    setShowDriftAlert(false);
+  };
+
+  const endDedicatedActivity = () => {
+    if (!currentActivity) return;
+    const now = Date.now();
+    const duration = Math.floor((now - currentActivity.startTime) / 1000);
+    
+    const session: ActivitySession = {
+      id: crypto.randomUUID(),
+      type: currentActivity.type,
+      startTime: currentActivity.startTime,
+      endTime: now,
+      duration: duration
+    };
+
+    setActivityHistory(prev => [...prev, session]);
+    setCurrentActivity(null);
+    setLastActivityEndTime(now);
+  };
+
+  // Wrapped timer start for tasks to capture drift
+  const startTaskTimer = (taskId: string, subtaskTitle: string) => {
+    if (currentActivity) return; // Don't start task if wellness running
+    const now = Date.now();
+    captureDrift(now);
+    setActiveTimer({ taskId, subtaskTitle });
+    setShowDriftAlert(false);
+  };
 
   const formatTimeFull = (seconds: number) => {
     if (seconds === 0) return '0m';
@@ -155,7 +264,14 @@ const App: React.FC = () => {
       if (t.id === activeTimer.taskId) {
         const updatedSubtasks = t.subtasks.map(s => {
           if (s.title === activeTimer.subtaskTitle) {
-            return { ...s, timeSpent: (s.timeSpent || 0) + elapsed };
+            const endTime = Date.now();
+            const startTime = endTime - (elapsed * 1000);
+            const newSession = { startTime, endTime, duration: elapsed };
+            return { 
+              ...s, 
+              timeSpent: (s.timeSpent || 0) + elapsed,
+              sessions: [...(s.sessions || []), newSession]
+            };
           }
           return s;
         });
@@ -168,7 +284,15 @@ const App: React.FC = () => {
       return t;
     }));
     setActiveTimer(null);
+    setLastActivityEndTime(Date.now()); // Reset drift timer
   };
+
+  const wellnessOptions = [
+    { type: 'food', icon: Utensils, color: 'text-amber-500', label: 'Food' },
+    { type: 'nap', icon: Moon, color: 'text-violet-500', label: 'Nap' },
+    { type: 'rest', icon: Armchair, color: 'text-cyan-500', label: 'Rest' },
+    { type: 'break', icon: Coffee, color: 'text-rose-500', label: 'Break' },
+  ];
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-[#fcfdfe] text-slate-900'} overflow-x-hidden`}>
@@ -193,6 +317,29 @@ const App: React.FC = () => {
               />
             </div>
             
+            {/* Desktop Wellness Buttons */}
+            <div className={`hidden lg:flex items-center gap-1 p-1 rounded-lg transition-colors duration-300 mr-2 ${
+              darkMode ? 'bg-slate-800' : 'bg-slate-100'
+            }`}>
+               {wellnessOptions.map((item) => (
+                 <button
+                   key={item.type}
+                   onClick={() => startDedicatedActivity(item.type as ActivityType)}
+                   disabled={!!activeTimer || !!currentActivity}
+                   className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${item.color} ${
+                     darkMode 
+                       ? 'hover:bg-slate-700' 
+                       : 'hover:bg-white hover:shadow-sm'
+                   } ${
+                     activeTimer || currentActivity ? 'opacity-30 cursor-not-allowed' : ''
+                   }`}
+                   title={item.label}
+                 >
+                   {item.label}
+                 </button>
+               ))}
+            </div>
+
             <button 
               onClick={() => setDarkMode(!darkMode)}
               className={`p-2 rounded-lg transition-colors ${darkMode ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -236,12 +383,44 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className={`p-5 rounded-2xl border shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+            {/* Wellness & Breaks Section - Visible only on mobile/tablet */}
+            <div className={`lg:hidden p-5 rounded-2xl border shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+              <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Wellness & Breaks</h2>
+              <div className="grid grid-cols-4 gap-2">
+                {wellnessOptions.map((item) => (
+                  <button
+                    key={item.type}
+                    onClick={() => startDedicatedActivity(item.type as ActivityType)}
+                    disabled={!!activeTimer || !!currentActivity}
+                    className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border transition-all duration-200 ${
+                      activeTimer || currentActivity ? 'opacity-30 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'
+                    } ${
+                      darkMode ? 'bg-slate-800/50 border-slate-800 hover:border-slate-700' : 'bg-slate-50 border-slate-100 hover:border-slate-200'
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                       item.type === 'food' ? 'bg-amber-500' : 
+                       item.type === 'nap' ? 'bg-violet-500' : 
+                       item.type === 'rest' ? 'bg-cyan-500' : 'bg-rose-500'
+                    } text-white shadow-sm`}>
+                      <item.icon size={14} strokeWidth={2.5} />
+                    </div>
+                    <span className={`text-[9px] font-bold ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setShowAnalytics(true)}
+              className={`p-5 rounded-2xl border shadow-sm transition-all duration-300 group cursor-pointer hover:shadow-md hover:scale-[1.02] ${darkMode ? 'bg-slate-900 border-slate-800 hover:border-indigo-500/30' : 'bg-white border-slate-100 hover:border-indigo-200'}`}
+            >
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
-                  <BarChart3 size={14} className="text-indigo-500" />
-                  <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Analysis</h2>
+                  <BarChart3 size={14} className="text-indigo-500 group-hover:text-indigo-400 transition-colors" />
+                  <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] group-hover:text-indigo-500 transition-colors ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Analysis</h2>
                 </div>
+                <ChevronRight size={14} className={`opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
               </div>
               <div className="mb-6 pb-4 border-b border-slate-800/20 dark:border-slate-800">
                 <div className="flex items-baseline gap-1.5 mb-1">
@@ -315,7 +494,7 @@ const App: React.FC = () => {
                     task={task} 
                     onUpdate={updateTask}
                     onDelete={deleteTask}
-                    onStartTimer={(taskId, subtaskTitle) => setActiveTimer({ taskId, subtaskTitle })}
+                    onStartTimer={startTaskTimer}
                     darkMode={darkMode}
                   />
                 ))
@@ -330,6 +509,27 @@ const App: React.FC = () => {
         </div>
       </main>
 
+      {/* Overlays */}
+      {currentActivity && (
+        <FloatingTimer 
+          type={currentActivity.type}
+          startTime={currentActivity.startTime}
+          onDone={endDedicatedActivity}
+          darkMode={darkMode}
+        />
+      )}
+
+      {showDriftAlert && (
+        <DriftAlert 
+          onStartBreak={() => startDedicatedActivity('break')} 
+          onDismiss={() => {
+            setShowDriftAlert(false);
+            setLastActivityEndTime(Date.now()); // Reset drift timer
+          }}
+          darkMode={darkMode} 
+        />
+      )}
+
       {activeTimer && (
         <TimerOverlay 
           subtaskTitle={activeTimer.subtaskTitle}
@@ -338,6 +538,13 @@ const App: React.FC = () => {
           onComplete={recordTime}
         />
       )}
+
+      <AnalyticsModal 
+        isOpen={showAnalytics}
+        onClose={() => setShowAnalytics(false)}
+        tasks={tasks}
+        darkMode={darkMode}
+      />
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 dark:bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
