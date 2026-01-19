@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Task, ActivitySession } from '../types';
-import { X, Calendar, Activity } from 'lucide-react';
+import { X, Calendar, Activity, Clock } from 'lucide-react';
 
 interface AnalyticsModalProps {
   isOpen: boolean;
@@ -36,11 +36,11 @@ const COLORS = [
 
 // Updated Wellness Colors: Soft, mindful palette
 const ACTIVITY_COLORS: Record<string, string> = {
-  food: 'bg-sky-300',      // Soft Blue
-  nap: 'bg-amber-200',     // Soft Yellow
-  rest: 'bg-violet-300',   // Soft Purple
-  break: 'bg-emerald-300', // Soft Green
-  drift: 'bg-gray-400'    // Soft Neutral Gray-Blue
+  food: 'bg-sky-400',      // Slightly more saturated for visibility against white text
+  nap: 'bg-amber-300',     
+  rest: 'bg-violet-400',   
+  break: 'bg-emerald-400', 
+  drift: 'bg-slate-400'    
 };
 
 const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks, activityHistory = [], darkMode }) => {
@@ -51,7 +51,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
   const startOfDay = today.getTime();
   const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
   
-  const dateStr = today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   // Process data for the timeline and calculate layout lanes
   const { segmentsWithLanes, maxLanes, totalDurationMap } = useMemo(() => {
@@ -89,7 +89,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
       if (activity.startTime >= startOfDay && activity.startTime < endOfDay) {
          rawSegments.push({
            taskTitle: activity.type.charAt(0).toUpperCase() + activity.type.slice(1),
-           subtaskTitle: activity.type === 'drift' ? 'Unstructured' : 'Wellness',
+           subtaskTitle: activity.type === 'drift' ? 'Unstructured Time' : 'Wellness Session',
            startTime: activity.startTime,
            endTime: activity.endTime,
            duration: activity.duration,
@@ -111,8 +111,8 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
       
       // Try to fit in an existing lane
       for (let i = 0; i < lanes.length; i++) {
-        // Adding a small buffer (e.g., 60s) to visually separate close items
-        if (segment.startTime >= lanes[i]) {
+        // Adding a small buffer (e.g., 2 mins) to visually separate close items
+        if (segment.startTime >= lanes[i] + 120000) {
           laneIndex = i;
           break;
         }
@@ -148,7 +148,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
   }, [tasks, activityHistory, startOfDay, endOfDay]);
 
   const formatTime = (ts: number) => {
-    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
   const formatDuration = (seconds: number) => {
@@ -159,66 +159,72 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
   };
 
   // Dimensions
-  const laneHeight = 48; // Spacious look
-  const laneGap = 12;
-  const chartHeight = Math.max(160, maxLanes * (laneHeight + laneGap));
+  const laneHeight = 64; // Taller for better readability
+  const laneGap = 20;    // Increased gap for visual breathing room
+  const headerHeight = 40; // Space for X-axis labels
+  const chartHeight = Math.max(200, maxLanes * (laneHeight + laneGap));
+
+  // 2-Hour Intervals for Grid
+  const hours = Array.from({ length: 13 }, (_, i) => i * 2);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-300">
       <div 
-        className={`w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 ${
-          darkMode ? 'bg-slate-950 text-slate-100 border border-slate-800' : 'bg-white text-slate-900 border border-slate-200'
+        className={`w-full max-w-7xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 border ${
+          darkMode ? 'bg-slate-950 text-slate-100 border-slate-800' : 'bg-white text-slate-900 border-slate-200'
         }`}
       >
         {/* Header */}
-        <div className={`p-6 border-b flex items-center justify-between ${darkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+        <div className={`px-8 py-6 border-b flex items-center justify-between ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50/80'}`}>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Activity size={16} className="text-indigo-500" />
-              <h2 className={`text-xs font-black uppercase tracking-widest ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className={`p-1.5 rounded-md ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
+                <Activity size={14} strokeWidth={2.5} />
+              </div>
+              <h2 className={`text-[11px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Focus & Wellness Analysis
               </h2>
             </div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight">24-Hour Timeline</h1>
-              <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                <Calendar size={10} />
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold tracking-tight">Daily Timeline</h1>
+              <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 border ${darkMode ? 'bg-slate-900 border-slate-700 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}>
+                <Calendar size={12} />
                 {dateStr}
               </div>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-900'}`}
+            className={`p-2.5 rounded-full transition-all duration-200 ${darkMode ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-900'}`}
           >
-            <X size={20} />
+            <X size={22} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden relative">
            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
             
             {/* Timeline Chart Container */}
-            <div className="mb-12 relative">
+            <div className="mb-12 relative select-none">
               <div 
-                className="relative w-full select-none"
-                style={{ height: chartHeight + 40 }} // Extra space for x-axis
+                className="relative w-full"
+                style={{ height: chartHeight + headerHeight }} 
               >
                 {/* Grid Lines & Labels */}
                 <div className="absolute inset-0 flex justify-between pointer-events-none z-0">
-                  {[0, 4, 8, 12, 16, 20, 24].map((hour) => (
-                    <div key={hour} className="flex flex-col items-center h-full" style={{ width: '1px' }}>
-                      <div className={`flex-1 w-px border-l border-dashed opacity-10 ${darkMode ? 'border-slate-100' : 'border-slate-900'}`} />
-                      <span className={`text-[10px] font-bold mt-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {hours.map((hour) => (
+                    <div key={hour} className="flex flex-col items-center h-full relative" style={{ width: '1px' }}>
+                      <span className={`absolute -top-8 text-[11px] font-bold tabular-nums tracking-tight ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                         {hour.toString().padStart(2, '0')}:00
                       </span>
+                      <div className={`w-px h-full ${hour === 0 || hour === 24 ? '' : 'border-l border-dashed'} ${darkMode ? 'border-slate-800' : 'border-slate-200'}`} />
                     </div>
                   ))}
                 </div>
 
                 {/* Segments (Swimlanes) */}
-                <div className="absolute inset-0 top-0 right-0 left-0 z-10">
+                <div className="absolute inset-0 right-0 left-0 z-10" style={{ top: 0 }}>
                   {segmentsWithLanes.map((segment, idx) => {
                     const daySeconds = 24 * 60 * 60;
                     const startOffset = (segment.startTime - startOfDay) / 1000;
@@ -227,57 +233,83 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
                     const top = (segment.lane || 0) * (laneHeight + laneGap);
 
                     // Check if wide enough for internal text
-                    const isWide = width > 5; 
+                    const isWide = width > 3; 
+                    const isVeryWide = width > 8;
                     
                     // Determine text color based on background intensity
-                    // Soft pastel backgrounds (Activities) generally need dark text in light mode, but white text usually works well with decent opacity.
-                    // However, yellow (amber-200) might need dark text.
-                    const isYellow = segment.color.includes('amber-200');
-                    const textColorClass = isYellow ? 'text-slate-800' : 'text-white';
+                    // Generally white text for our premium palette, mostly dark or vibrant backgrounds
+                    const isYellow = segment.color.includes('amber');
+                    const textColorClass = isYellow ? 'text-slate-900' : 'text-white';
+                    const subTextColorClass = isYellow ? 'text-slate-700' : 'text-white/80';
 
                     return (
                       <div
                         key={idx}
-                        className={`absolute rounded-lg shadow-sm overflow-hidden hover:brightness-105 hover:shadow-md transition-all cursor-default group/segment flex flex-col justify-center px-2 border border-black/5 dark:border-white/5`}
+                        className={`absolute rounded-xl shadow-lg border-t border-white/20 hover:scale-[1.01] hover:shadow-xl transition-all duration-300 cursor-default group/segment flex flex-col justify-center px-3 overflow-hidden`}
                         style={{ 
                           left: `${Math.max(0, Math.min(100, left))}%`, 
                           width: `${Math.max(0.2, Math.min(100, width))}%`,
                           top: top,
                           height: laneHeight,
-                          // Background color applied directly via className below
                         }}
                       >
-                         {/* Color Layer */}
-                         <div className={`absolute inset-0 ${segment.color} opacity-90`}></div>
+                         {/* Background & Gradient */}
+                         <div className={`absolute inset-0 ${segment.color}`}></div>
+                         <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
                          
                          {/* Content inside bar */}
-                         <div className="relative z-10 flex flex-col">
+                         <div className="relative z-10 flex flex-col min-w-0">
                             {isWide ? (
                               <>
-                                <span className={`text-[10px] font-bold truncate drop-shadow-sm leading-tight ${textColorClass}`}>
-                                  {segment.taskTitle}
-                                </span>
-                                <span className={`text-[9px] font-medium truncate drop-shadow-sm opacity-90 ${textColorClass}`}>
-                                  {formatTime(segment.startTime)} - {formatTime(segment.endTime)}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-bold truncate drop-shadow-sm ${textColorClass}`}>
+                                    {segment.taskTitle}
+                                  </span>
+                                  {isVeryWide && segment.isActivity && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 backdrop-blur-sm ${textColorClass}`}>
+                                      {formatDuration(segment.duration)}
+                                    </span>
+                                  )}
+                                </div>
+                                {isVeryWide && (
+                                  <div className={`flex items-center gap-1.5 mt-0.5 text-[10px] font-medium truncate ${subTextColorClass}`}>
+                                    <Clock size={10} strokeWidth={2.5} />
+                                    <span>{formatTime(segment.startTime)} - {formatTime(segment.endTime)}</span>
+                                  </div>
+                                )}
                               </>
                             ) : (
-                               // Minimal content for thin bars
+                               // Minimal content for thin bars (just hover)
                                <div className="w-full h-full" />
                             )}
                          </div>
 
-                        {/* Tooltip (Always available for details) */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/segment:opacity-100 transition-opacity z-20 pointer-events-none whitespace-nowrap">
-                          <div className={`px-3 py-2 rounded-lg shadow-xl text-xs flex flex-col items-center ${darkMode ? 'bg-slate-800 text-slate-200 border border-slate-700' : 'bg-white text-slate-800 border border-slate-100'}`}>
-                            <span className="font-bold text-sm mb-0.5">{segment.taskTitle}</span>
-                            {!segment.isActivity && <span className="opacity-70 text-[10px]">{segment.subtaskTitle}</span>}
-                            <span className={`mt-1 font-mono text-[9px] uppercase tracking-wider ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                              {formatTime(segment.startTime)} - {formatTime(segment.endTime)}
-                            </span>
-                            <span className="text-[9px] opacity-60 mt-0.5">Duration: {formatDuration(segment.duration)}</span>
+                        {/* Premium Tooltip */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 opacity-0 group-hover/segment:opacity-100 transition-all duration-200 z-50 pointer-events-none whitespace-nowrap scale-95 group-hover/segment:scale-100 origin-bottom">
+                          <div className={`p-3 rounded-xl shadow-2xl border flex flex-col gap-1.5 min-w-[140px] ${darkMode ? 'bg-slate-900 text-slate-100 border-slate-700' : 'bg-white text-slate-900 border-slate-200'}`}>
+                            <div className="flex items-center gap-2 border-b pb-1.5 border-slate-200 dark:border-slate-800">
+                              <div className={`w-2 h-2 rounded-full ${segment.color}`} />
+                              <span className="font-bold text-xs">{segment.taskTitle}</span>
+                            </div>
+                            
+                            <div className="space-y-1">
+                              {!segment.isActivity && (
+                                <div className={`text-[10px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {segment.subtaskTitle}
+                                </div>
+                              )}
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className={`font-mono ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {formatTime(segment.startTime)} - {formatTime(segment.endTime)}
+                                </span>
+                                <span className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                                  {formatDuration(segment.duration)}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div className={`w-2 h-2 rotate-45 mx-auto -mt-1 ${darkMode ? 'bg-slate-800 border-r border-b border-slate-700' : 'bg-white border-r border-b border-slate-100'}`}></div>
+                          {/* Triangle arrow */}
+                          <div className={`w-3 h-3 rotate-45 mx-auto -mt-1.5 border-r border-b ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}></div>
                         </div>
                       </div>
                     );
@@ -287,34 +319,39 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
             </div>
 
             {/* Breakdown / Legend */}
-            <div className="border-t pt-8 mt-4 border-slate-200 dark:border-slate-800">
-               <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-6 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                 Total Duration Breakdown
-               </h3>
+            <div className={`border-t pt-8 mt-4 ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+               <div className="flex items-center gap-3 mb-6">
+                 <h3 className={`text-[11px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                   Session Breakdown
+                 </h3>
+                 <div className={`h-px flex-1 ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`} />
+               </div>
                
                {totalDurationMap.length > 0 ? (
                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                    {totalDurationMap.map((item, idx) => (
-                     <div key={idx} className={`flex items-center p-3 rounded-xl border transition-colors ${darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
-                        <div className={`w-3 h-3 rounded-full mr-3 ${item.color}`} />
+                     <div key={idx} className={`flex items-center p-4 rounded-2xl border transition-all duration-300 hover:shadow-md ${darkMode ? 'bg-slate-900/40 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
+                        <div className={`w-10 h-10 rounded-xl mr-3 flex items-center justify-center shadow-inner ${item.color.replace('bg-', 'text-').replace('400', '100')} ${darkMode ? 'bg-white/5' : 'bg-slate-50'}`}>
+                           <div className={`w-4 h-4 rounded-full ${item.color}`} />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-xs font-bold truncate ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                          <div className={`text-sm font-bold truncate ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                             {item.title}
                           </div>
-                          <div className={`text-[10px] font-medium opacity-60 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <div className={`text-[11px] font-medium opacity-60 mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                             {segmentsWithLanes.filter(s => s.taskTitle === item.title).length} sessions
                           </div>
                         </div>
-                        <div className={`text-xs font-black tabular-nums ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                        <div className={`text-sm font-black tabular-nums ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                           {formatDuration(item.duration)}
                         </div>
                      </div>
                    ))}
                  </div>
                ) : (
-                  <div className={`py-12 flex flex-col items-center justify-center rounded-2xl border border-dashed ${darkMode ? 'bg-slate-900/30 border-slate-800' : 'bg-slate-50/50 border-slate-200'}`}>
-                    <Activity size={24} className={`mb-2 opacity-20 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`} />
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <div className={`py-16 flex flex-col items-center justify-center rounded-2xl border border-dashed ${darkMode ? 'bg-slate-900/20 border-slate-800' : 'bg-slate-50/50 border-slate-200'}`}>
+                    <Activity size={32} className={`mb-3 opacity-20 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                    <p className={`text-xs font-black uppercase tracking-widest ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>
                       No activity recorded today
                     </p>
                   </div>
