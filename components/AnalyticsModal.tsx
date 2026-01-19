@@ -183,22 +183,45 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
 
           <hr className={`my-8 ${darkMode ? 'border-slate-800' : 'border-slate-100'}`} />
 
-          {/* Breakdown Section */}
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-6">Total Duration Breakdown</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {totalDurationMap.map((item, idx) => (
-              <div key={idx} className={`p-4 rounded-2xl border flex items-center justify-between ${darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                  <div>
-                    <div className="text-sm font-bold leading-tight">{item.title}</div>
-                    <div className="text-[10px] text-slate-500">{segments.filter(s => s.taskTitle === item.title).length} sessions</div>
-                  </div>
-                </div>
-                <div className="text-lg font-black tabular-nums">{formatDuration(item.duration)}</div>
-              </div>
-            ))}
+         {/* Breakdown Section */}
+<div className="mt-8">
+  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4">
+    Total Duration Breakdown
+  </h3>
+  
+  <div className="flex flex-wrap gap-3">
+    {totalDurationMap.map((item, idx) => (
+      <div 
+        key={idx} 
+        className={`px-4 py-2.5 rounded-xl border flex items-center gap-4 transition-all hover:scale-[1.02] ${
+          darkMode 
+            ? 'bg-slate-900/40 border-slate-800 hover:border-slate-700' 
+            : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+        }`}
+      >
+        {/* Left Side: Color & Title Info */}
+        <div className="flex items-center gap-2.5">
+          <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${item.color}`} />
+          <div className="flex flex-col">
+            <span className={`text-xs font-bold leading-none ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+              {item.title}
+            </span>
+            <span className="text-[9px] font-medium text-slate-500 mt-1">
+              {segments.filter(s => s.taskTitle === item.title).length} sessions
+            </span>
           </div>
+        </div>
+
+        {/* Right Side: Duration (Separated by a subtle line) */}
+        <div className={`pl-4 border-l h-6 flex items-center ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+          <span className={`text-sm font-black tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+            {formatDuration(item.duration)}
+          </span>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
         </div>
       </div>
     </div>
