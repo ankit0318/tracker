@@ -73,6 +73,8 @@ const App: React.FC = () => {
   // Initialized to now so drift doesn't start immediately on page load.
   const [lastActivityEndTime, setLastActivityEndTime] = useState<number>(Date.now());
   const [showDriftAlert, setShowDriftAlert] = useState(false);
+  // New state to prevent alert from reappearing immediately after dismissal for the same session
+  const [driftAlertDismissed, setDriftAlertDismissed] = useState(false);
 
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('ascend_theme');
@@ -117,19 +119,23 @@ const App: React.FC = () => {
         const DRIFT_ALERT_THRESHOLD = 10 * 60 * 1000;
 
         // If we are past the buffer + threshold, show alert
-        if (timeSinceLastActive > (DRIFT_BUFFER + DRIFT_ALERT_THRESHOLD) && !showDriftAlert) {
+        // Only show if not already visible AND not explicitly dismissed for this session
+        if (timeSinceLastActive > (DRIFT_BUFFER + DRIFT_ALERT_THRESHOLD) && !showDriftAlert && !driftAlertDismissed) {
           setShowDriftAlert(true);
         }
       } else {
         // If we are active, ensure alert is hidden
         if (showDriftAlert) setShowDriftAlert(false);
+        // Reset the dismissal flag because we are active again; next drift will be a new session
+        if (driftAlertDismissed) setDriftAlertDismissed(false);
+        
         // Keep updating lastActivityEndTime while active to prevent immediate drift on stop
         setLastActivityEndTime(Date.now());
       }
     }, 1000);
 
     return () => clearInterval(driftInterval);
-  }, [activeTimer, currentActivity, lastActivityEndTime, showDriftAlert]);
+  }, [activeTimer, currentActivity, lastActivityEndTime, showDriftAlert, driftAlertDismissed]);
 
   // Helper: Record any background drift before starting a new activity
   const captureDrift = (startTimeOfNewActivity: number) => {
@@ -158,6 +164,7 @@ const App: React.FC = () => {
     captureDrift(now); // Check if we drifted before starting this
     setCurrentActivity({ type, startTime: now });
     setShowDriftAlert(false);
+    setDriftAlertDismissed(false);
   };
 
   const endDedicatedActivity = () => {
@@ -185,6 +192,7 @@ const App: React.FC = () => {
     captureDrift(now);
     setActiveTimer({ taskId, subtaskTitle });
     setShowDriftAlert(false);
+    setDriftAlertDismissed(false);
   };
 
   const formatTimeFull = (seconds: number) => {
@@ -525,7 +533,7 @@ const App: React.FC = () => {
           onStartBreak={() => startDedicatedActivity('break')} 
           onDismiss={() => {
             setShowDriftAlert(false);
-            setLastActivityEndTime(Date.now()); // Reset drift timer
+            setDriftAlertDismissed(true); // Suppress alert, but let drift time continue accumulating
           }}
           darkMode={darkMode} 
         />
