@@ -41,7 +41,7 @@ const DriftAlert: React.FC<DriftAlertProps> = ({ onStartBreak, onDismiss, darkMo
             </button>
             <button 
               onClick={onStartBreak}
-              className="flex-1 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
             >
               <Coffee size={14} />
               Take Break

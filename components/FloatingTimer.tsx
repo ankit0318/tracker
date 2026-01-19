@@ -30,10 +30,10 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ type, startTime, onDone, 
 
   const getConfig = () => {
     switch (type) {
-      case 'food': return { icon: Utensils, label: 'Refueling', color: 'text-amber-500', bg: 'bg-amber-500' };
-      case 'nap': return { icon: Moon, label: 'Power Nap', color: 'text-violet-500', bg: 'bg-violet-500' };
-      case 'rest': return { icon: Armchair, label: 'Resting', color: 'text-cyan-500', bg: 'bg-cyan-500' };
-      case 'break': return { icon: Coffee, label: 'Break', color: 'text-rose-500', bg: 'bg-rose-500' };
+      case 'food': return { icon: Utensils, label: 'Refueling', color: 'text-sky-500', bg: 'bg-sky-500' };
+      case 'nap': return { icon: Moon, label: 'Power Nap', color: 'text-amber-500', bg: 'bg-amber-500' };
+      case 'rest': return { icon: Armchair, label: 'Resting', color: 'text-violet-500', bg: 'bg-violet-500' };
+      case 'break': return { icon: Coffee, label: 'Break', color: 'text-emerald-500', bg: 'bg-emerald-500' };
       default: return { icon: Coffee, label: 'Break', color: 'text-slate-500', bg: 'bg-slate-500' };
     }
   };

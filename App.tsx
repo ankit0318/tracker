@@ -112,7 +112,7 @@ const App: React.FC = () => {
         const now = Date.now();
         const timeSinceLastActive = now - lastActivityEndTime;
         
-        // Buffer: 2 minutes (120000ms). Drift Alert: 20 minutes (1200000ms)
+        // Buffer: 2 minutes (120000ms). Drift Alert: 10 minutes
         const DRIFT_BUFFER = 2 * 60 * 1000;
         const DRIFT_ALERT_THRESHOLD = 10 * 60 * 1000;
 
@@ -287,11 +287,12 @@ const App: React.FC = () => {
     setLastActivityEndTime(Date.now()); // Reset drift timer
   };
 
+  // Updated wellness options with new mindful colors
   const wellnessOptions = [
-    { type: 'food', icon: Utensils, color: 'text-amber-500', label: 'Food' },
-    { type: 'nap', icon: Moon, color: 'text-violet-500', label: 'Nap' },
-    { type: 'rest', icon: Armchair, color: 'text-cyan-500', label: 'Rest' },
-    { type: 'break', icon: Coffee, color: 'text-rose-500', label: 'Break' },
+    { type: 'food', icon: Utensils, color: 'text-sky-500', label: 'Food' },
+    { type: 'nap', icon: Moon, color: 'text-amber-500', label: 'Nap' },
+    { type: 'rest', icon: Armchair, color: 'text-violet-500', label: 'Rest' },
+    { type: 'break', icon: Coffee, color: 'text-emerald-500', label: 'Break' },
   ];
 
   return (
@@ -399,9 +400,9 @@ const App: React.FC = () => {
                     }`}
                   >
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                       item.type === 'food' ? 'bg-amber-500' : 
-                       item.type === 'nap' ? 'bg-violet-500' : 
-                       item.type === 'rest' ? 'bg-cyan-500' : 'bg-rose-500'
+                       item.type === 'food' ? 'bg-sky-500' : 
+                       item.type === 'nap' ? 'bg-amber-500' : 
+                       item.type === 'rest' ? 'bg-violet-500' : 'bg-emerald-500'
                     } text-white shadow-sm`}>
                       <item.icon size={14} strokeWidth={2.5} />
                     </div>

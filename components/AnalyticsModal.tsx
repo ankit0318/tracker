@@ -22,25 +22,25 @@ interface TimelineSegment {
   isActivity?: boolean;
 }
 
+// Updated Task Colors: Professional, distinct, not overly vibrant
 const COLORS = [
   'bg-indigo-500',
-  'bg-emerald-500',
-  'bg-violet-500',
-  'bg-blue-500',
   'bg-rose-500',
-  'bg-amber-500',
-  'bg-cyan-500',
-  'bg-fuchsia-500',
-  'bg-lime-500',
-  'bg-pink-500'
+  'bg-teal-600',
+  'bg-orange-500',
+  'bg-fuchsia-600',
+  'bg-blue-600',
+  'bg-red-500',
+  'bg-cyan-600',
 ];
 
+// Updated Wellness Colors: Soft, mindful palette
 const ACTIVITY_COLORS: Record<string, string> = {
-  food: 'bg-amber-400',
-  nap: 'bg-violet-400',
-  rest: 'bg-cyan-400',
-  break: 'bg-rose-400',
-  drift: 'bg-slate-400'
+  food: 'bg-sky-300',      // Soft Blue
+  nap: 'bg-amber-200',     // Soft Yellow
+  rest: 'bg-violet-300',   // Soft Purple
+  break: 'bg-emerald-300', // Soft Green
+  drift: 'bg-slate-400'    // Soft Neutral Gray-Blue
 };
 
 const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks, activityHistory = [], darkMode }) => {
@@ -89,7 +89,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
       if (activity.startTime >= startOfDay && activity.startTime < endOfDay) {
          rawSegments.push({
            taskTitle: activity.type.charAt(0).toUpperCase() + activity.type.slice(1),
-           subtaskTitle: 'Wellness',
+           subtaskTitle: activity.type === 'drift' ? 'Unstructured' : 'Wellness',
            startTime: activity.startTime,
            endTime: activity.endTime,
            duration: activity.duration,
@@ -159,7 +159,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
   };
 
   // Dimensions
-  const laneHeight = 48; // Significantly bigger for "spacier" look
+  const laneHeight = 48; // Spacious look
   const laneGap = 12;
   const chartHeight = Math.max(160, maxLanes * (laneHeight + laneGap));
 
@@ -228,32 +228,36 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
 
                     // Check if wide enough for internal text
                     const isWide = width > 5; 
+                    
+                    // Determine text color based on background intensity
+                    // Soft pastel backgrounds (Activities) generally need dark text in light mode, but white text usually works well with decent opacity.
+                    // However, yellow (amber-200) might need dark text.
+                    const isYellow = segment.color.includes('amber-200');
+                    const textColorClass = isYellow ? 'text-slate-800' : 'text-white';
 
                     return (
                       <div
                         key={idx}
-                        className={`absolute rounded-lg shadow-sm border border-white/10 overflow-hidden hover:brightness-110 hover:shadow-md transition-all cursor-default group/segment flex flex-col justify-center px-2`}
+                        className={`absolute rounded-lg shadow-sm overflow-hidden hover:brightness-105 hover:shadow-md transition-all cursor-default group/segment flex flex-col justify-center px-2 border border-black/5 dark:border-white/5`}
                         style={{ 
                           left: `${Math.max(0, Math.min(100, left))}%`, 
                           width: `${Math.max(0.2, Math.min(100, width))}%`,
                           top: top,
                           height: laneHeight,
-                          backgroundColor: segment.color.replace('bg-', '') // We need computed color usually, but class works if we map it to style or use className.
-                                                                           // Since we use Tailwind classes for colors in the data, let's just apply the className.
+                          // Background color applied directly via className below
                         }}
                       >
-                         {/* We use a colored div background via className */}
-                         <div className={`absolute inset-0 opacity-20 ${darkMode ? 'bg-black' : 'bg-white'}`}></div>
+                         {/* Color Layer */}
                          <div className={`absolute inset-0 ${segment.color} opacity-90`}></div>
                          
                          {/* Content inside bar */}
                          <div className="relative z-10 flex flex-col">
                             {isWide ? (
                               <>
-                                <span className="text-[10px] font-bold text-white truncate drop-shadow-md leading-tight">
+                                <span className={`text-[10px] font-bold truncate drop-shadow-sm leading-tight ${textColorClass}`}>
                                   {segment.taskTitle}
                                 </span>
-                                <span className="text-[9px] font-medium text-white/80 truncate drop-shadow-md">
+                                <span className={`text-[9px] font-medium truncate drop-shadow-sm opacity-90 ${textColorClass}`}>
                                   {formatTime(segment.startTime)} - {formatTime(segment.endTime)}
                                 </span>
                               </>
