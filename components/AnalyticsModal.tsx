@@ -164,9 +164,9 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
                     style={{ left: `${left}%`, width: `${width}%`, height: blockHeight }}
                   >
                     {/* Pill Badge (Session Info) */}
-                    <div className={`absolute -top-8 left-0 flex items-center whitespace-nowrap px-2 py-1 rounded-md text-[9px] font-bold shadow-sm border transition-transform group-hover:-translate-y-1 ${segment.color} text-white border-white/20 z-20`}>
-                      {segment.taskTitle}: {formatTime(segment.startTime)}
-                    </div>
+                    // <div className={`absolute -top-8 left-0 flex items-center whitespace-nowrap px-2 py-1 rounded-md text-[9px] font-bold shadow-sm border transition-transform group-hover:-translate-y-1 ${segment.color} text-white border-white/20 z-20`}>
+                    //   {segment.taskTitle}: {formatTime(segment.startTime)}
+                    // </div>
 
                     {/* The Visual Block */}
                     <div className={`w-full h-full rounded-xl ${segment.color} opacity-90 group-hover:opacity-100 group-hover:scale-[1.02] transition-all shadow-lg border-t border-white/20`} />
