@@ -40,7 +40,7 @@ const ACTIVITY_COLORS: Record<string, string> = {
   nap: 'bg-amber-200',     // Soft Yellow
   rest: 'bg-violet-300',   // Soft Purple
   break: 'bg-emerald-300', // Soft Green
-  drift: 'bg-slate-400'    // Soft Neutral Gray-Blue
+  drift: 'bg-gray-400'    // Soft Neutral Gray-Blue
 };
 
 const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks, activityHistory = [], darkMode }) => {
