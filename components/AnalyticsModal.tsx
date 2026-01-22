@@ -90,12 +90,13 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
 
     const sortedSegments = rawSegments.sort((a, b) => a.startTime - b.startTime);
 
-    const durationMap: Record<string, { title: string, duration: number, color: string }> = {};
+    const durationMap: Record<string, { title: string, duration: number, color: string, sessionCount: number }> = {};
     sortedSegments.forEach(seg => {
         if (!durationMap[seg.taskTitle]) {
-          durationMap[seg.taskTitle] = { title: seg.taskTitle, duration: 0, color: seg.color };
+          durationMap[seg.taskTitle] = { title: seg.taskTitle, duration: 0, color: seg.color, sessionCount: 0 };
         }
         durationMap[seg.taskTitle].duration += seg.duration;
+        durationMap[seg.taskTitle].sessionCount += 1;
     });
 
     return { 
@@ -207,7 +208,7 @@ const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose, tasks,
               {item.title}
             </span>
             <span className="text-[9px] font-medium text-slate-500 mt-1">
-              {segments.filter(s => s.taskTitle === item.title).length} sessions
+              {item.sessionCount} sessions
             </span>
           </div>
         </div>
