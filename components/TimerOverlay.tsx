@@ -25,8 +25,13 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const startElapsedRef = useRef<number>(0);
+  const durationRef = useRef(duration);
 
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
 
   // Constants for circular ring
   const size = 320;
@@ -98,7 +103,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
         const now = Date.now();
         const diff = Math.floor((now - startTimeRef.current) / 1000);
         const newElapsed = startElapsedRef.current + diff;
-        const totalSeconds = duration * 60;
+        const totalSeconds = durationRef.current * 60;
         const newTimeLeft = Math.max(0, totalSeconds - newElapsed);
 
         setElapsed(newElapsed);
@@ -114,7 +119,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, isPaused, duration]); // Removed timeLeft dependency to prevent drift
+  }, [isActive, isPaused]); // Removed timeLeft and duration dependency to prevent drift/recreation
 
   // Separate effect to handle timer completion
   useEffect(() => {
