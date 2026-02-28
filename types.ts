@@ -23,9 +23,8 @@ export interface Task {
   subtasks: Subtask[];
   createdAt: number;
   totalTimeSpent?: number; // Total seconds spent on this task
+  status: 'active' | 'upcoming';
 }
-
-export type SortOption = 'newest' | 'oldest' | 'progress';
 
 export type ActivityType = 'food' | 'nap' | 'rest' | 'break' | 'drift';
 

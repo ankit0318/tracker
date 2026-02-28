@@ -11,7 +11,9 @@ import {
   CheckSquare,
   Clock,
   CircleDashed,
-  Edit2
+  Edit2,
+  Calendar,
+  Play
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -211,6 +213,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
         </div>
 
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            onClick={() => onUpdate({ ...task, status: (task.status || 'active') === 'upcoming' ? 'active' : 'upcoming' })} 
+            title={(task.status || 'active') === 'upcoming' ? 'Move to Active' : 'Move to Upcoming'} 
+            className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/10' : 'text-white/60 hover:text-indigo-300 hover:bg-white/10'}`}
+          >
+            {(task.status || 'active') === 'upcoming' ? <Play size={13} /> : <Calendar size={13} />}
+          </button>
           <button onClick={() => onDelete(task.id)} title="Delete" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-red-500 hover:bg-red-500/10' : 'text-white/60 hover:text-red-300 hover:bg-white/10'}`}>
             <Trash2 size={13} />
           </button>

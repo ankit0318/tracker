@@ -23,15 +23,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
   const [quoteIndex, setQuoteIndex] = useState(0);
   
   const timerRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const startElapsedRef = useRef<number>(0);
-  const durationRef = useRef(duration);
-
   const audioContextRef = useRef<AudioContext | null>(null);
-
-  useEffect(() => {
-    durationRef.current = duration;
-  }, [duration]);
 
   // Constants for circular ring
   const size = 320;
@@ -94,42 +86,26 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
   // }, [isStarted]);
 
   useEffect(() => {
-    if (isActive && !isPaused) {
-      // Snapshot the start time and current elapsed
-      startTimeRef.current = Date.now();
-      startElapsedRef.current = elapsed;
-
+    if (isActive && !isPaused && timeLeft > 0) {
       timerRef.current = window.setInterval(() => {
-        const now = Date.now();
-        const diff = Math.floor((now - startTimeRef.current) / 1000);
-        const newElapsed = startElapsedRef.current + diff;
-        const totalSeconds = durationRef.current * 60;
-        const newTimeLeft = Math.max(0, totalSeconds - newElapsed);
-
-        setElapsed(newElapsed);
-        setTimeLeft(newTimeLeft);
-
-        // Check for completion inside interval to stop overshooting if we wanted
-        // but the separate effect handles the logic nicely.
+        setTimeLeft((prev) => prev - 1);
+        setElapsed((prev) => prev + 1);
       }, 1000);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
     }
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isActive, isPaused]); // Removed timeLeft and duration dependency to prevent drift/recreation
-
-  // Separate effect to handle timer completion
-  useEffect(() => {
     if (timeLeft === 0 && isStarted && isActive) {
       setIsActive(false);
       playRingSound();
       // Brief delay before closing automatically if desired, 
       // but let's just trigger complete and let the user click Done to see the status.
     }
-  }, [timeLeft, isStarted, isActive]);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isActive, isPaused, timeLeft]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);

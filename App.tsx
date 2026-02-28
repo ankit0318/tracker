@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Task, SortOption, ActivityType, ActivitySession } from './types';
+import { Task, ActivityType, ActivitySession } from './types';
 import CircularProgress from './components/CircularProgress';
 import TaskCard from './components/TaskCard';
 import TimerOverlay from './components/TimerOverlay';
@@ -38,7 +38,8 @@ const INITIAL_TASKS: Task[] = [
       { id: 's3', title: 'Visual identity', isCompleted: false, percentage: 55, timeSpent: 600 },
     ],
     createdAt: Date.now() - 86400000 * 2,
-    totalTimeSpent: 3600
+    totalTimeSpent: 3600,
+    status: 'active'
   },
   {
     id: '2',
@@ -51,7 +52,8 @@ const INITIAL_TASKS: Task[] = [
       { id: 's5', title: 'Hover states', isCompleted: false, percentage: 0, timeSpent: 800 },
     ],
     createdAt: Date.now() - 86400000,
-    totalTimeSpent: 1800
+    totalTimeSpent: 1800,
+    status: 'active'
   }
 ];
 
@@ -81,9 +83,9 @@ const App: React.FC = () => {
     return saved === null ? true : saved === 'dark';
   });
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [filterStatus, setFilterStatus] = useState<'active' | 'upcoming'>('active');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', description: '' });
+  const [newTask, setNewTask] = useState<{ title: string; description: string; status: 'active' | 'upcoming' }>({ title: '', description: '', status: 'active' });
   
   const [activeTimer, setActiveTimer] = useState<{ taskId: string; subtaskTitle: string } | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -204,20 +206,21 @@ const App: React.FC = () => {
   };
 
   const stats = useMemo(() => {
-    if (tasks.length === 0) return { overall: 0, total: 0, completed: 0, subtasks: 0, subtasksCompleted: 0, totalTime: 0, taskBreakdown: [] };
-    const totalPercentage = tasks.reduce((acc, task) => acc + task.percentage, 0);
-    const subtasks = tasks.flatMap(t => t.subtasks);
-    const totalTime = tasks.reduce((acc, t) => acc + (t.totalTimeSpent || 0), 0);
+    const activeTasks = tasks.filter(t => (t.status || 'active') === 'active');
+    if (activeTasks.length === 0) return { overall: 0, total: 0, completed: 0, subtasks: 0, subtasksCompleted: 0, totalTime: 0, taskBreakdown: [] };
+    const totalPercentage = activeTasks.reduce((acc, task) => acc + task.percentage, 0);
+    const subtasks = activeTasks.flatMap(t => t.subtasks);
+    const totalTime = activeTasks.reduce((acc, t) => acc + (t.totalTimeSpent || 0), 0);
     
     // Sort tasks by time spent for the breakdown
-    const taskBreakdown = [...tasks]
+    const taskBreakdown = [...activeTasks]
       .filter(t => (t.totalTimeSpent || 0) > 0)
       .sort((a, b) => (b.totalTimeSpent || 0) - (a.totalTimeSpent || 0));
 
     return {
-      overall: totalPercentage / tasks.length,
-      total: tasks.length,
-      completed: tasks.filter(t => t.isCompleted).length,
+      overall: totalPercentage / activeTasks.length,
+      total: activeTasks.length,
+      completed: activeTasks.filter(t => t.isCompleted).length,
       subtasks: subtasks.length,
       subtasksCompleted: subtasks.filter(s => s.isCompleted).length,
       totalTime,
@@ -227,18 +230,14 @@ const App: React.FC = () => {
 
   const filteredAndSortedTasks = useMemo(() => {
     let result = tasks.filter(t => 
-      t.title.toLowerCase().includes(search.toLowerCase())
+      t.title.toLowerCase().includes(search.toLowerCase()) &&
+      (t.status || 'active') === filterStatus
     );
 
-    result.sort((a, b) => {
-      if (sortBy === 'newest') return b.createdAt - a.createdAt;
-      if (sortBy === 'oldest') return a.createdAt - b.createdAt;
-      if (sortBy === 'progress') return b.percentage - a.percentage;
-      return 0;
-    });
+    result.sort((a, b) => b.createdAt - a.createdAt);
 
     return result;
-  }, [tasks, search, sortBy]);
+  }, [tasks, search, filterStatus]);
 
   const addTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,10 +250,11 @@ const App: React.FC = () => {
       isCompleted: false,
       subtasks: [],
       createdAt: Date.now(),
-      totalTimeSpent: 0
+      totalTimeSpent: 0,
+      status: newTask.status
     };
     setTasks([task, ...tasks]);
-    setNewTask({ title: '', description: '' });
+    setNewTask({ title: '', description: '', status: 'active' });
     setShowAddModal(false);
   };
 
@@ -480,17 +480,19 @@ const App: React.FC = () => {
                 <h2 className={`text-[11px] font-black uppercase tracking-[0.15em] ${darkMode ? 'text-slate-400' : 'text-slate-800'}`}>Pipeline</h2>
               </div>
               <div className="flex items-center gap-3">
-                <div className={`flex items-center gap-1.5 px-2 py-1 border rounded-md shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
-                  <Filter size={11} className="text-slate-500" />
-                  <select 
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className={`bg-transparent text-[10px] font-black uppercase tracking-tighter outline-none cursor-pointer ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                <div className={`flex items-center p-1 border rounded-lg shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                  <button 
+                    onClick={() => setFilterStatus('active')}
+                    className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${filterStatus === 'active' ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600') : (darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
                   >
-                    <option value="newest" className={darkMode ? 'bg-slate-900' : ''}>Newest</option>
-                    <option value="oldest" className={darkMode ? 'bg-slate-900' : ''}>Oldest</option>
-                    <option value="progress" className={darkMode ? 'bg-slate-900' : ''}>Progress</option>
-                  </select>
+                    Active
+                  </button>
+                  <button 
+                    onClick={() => setFilterStatus('upcoming')}
+                    className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${filterStatus === 'upcoming' ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600') : (darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
+                  >
+                    Upcoming
+                  </button>
                 </div>
               </div>
             </div>
@@ -571,6 +573,25 @@ const App: React.FC = () => {
                     className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold outline-none focus:ring-1 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
                     placeholder="Enter goal name..."
                   />
+                </div>
+                <div className="space-y-1">
+                  <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Status</label>
+                  <div className={`flex p-1 border rounded-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                    <button
+                      type="button"
+                      onClick={() => setNewTask({ ...newTask, status: 'active' })}
+                      className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${newTask.status === 'active' ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-white text-indigo-600 shadow-sm') : (darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewTask({ ...newTask, status: 'upcoming' })}
+                      className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${newTask.status === 'upcoming' ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-white text-indigo-600 shadow-sm') : (darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
+                    >
+                      Upcoming
+                    </button>
+                  </div>
                 </div>
                 <div className="flex gap-2 pt-3">
                   <button type="button" onClick={() => setShowAddModal(false)} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-50 hover:text-slate-400' : 'text-slate-400 hover:text-slate-500'}`}>Cancel</button>
