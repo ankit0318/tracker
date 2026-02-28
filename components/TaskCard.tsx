@@ -22,10 +22,11 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   onStartTimer: (taskId: string, subtaskTitle: string) => void;
   darkMode?: boolean;
+  viewMode?: 'grid' | 'list';
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTimer, darkMode = false }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTimer, darkMode = false, viewMode = 'grid' }) => {
+  const [isExpanded, setIsExpanded] = useState(viewMode === 'grid');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [editingSubtaskProgress, setEditingSubtaskProgress] = useState<string | null>(null);
   
@@ -158,6 +159,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
     onUpdate({ ...task, subtasks: updatedSubtasks, percentage: autoPercent, isCompleted: autoPercent === 100 });
   };
 
+  const deleteSubtask = (subId: string) => {
+    const updatedSubtasks = task.subtasks.filter(s => s.id !== subId);
+    const autoPercent = calculateAutoPercentage(updatedSubtasks);
+    onUpdate({ ...task, subtasks: updatedSubtasks, percentage: autoPercent, isCompleted: autoPercent === 100 });
+  };
+
   const updateSubtaskPercentage = (subId: string, value: number) => {
     const updatedSubtasks = task.subtasks.map(s => 
       s.id === subId ? { ...s, percentage: value, isCompleted: value === 100 } : s
@@ -173,12 +180,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
       darkMode 
         ? `bg-slate-900 border-slate-800 hover:border-indigo-500/50 ${task.isCompleted ? 'bg-slate-800/40 opacity-95' : ''}` 
         : `bg-white border-slate-200 hover:border-indigo-300 ${task.isCompleted ? 'bg-slate-50/50' : ''}`
-    }`}>
+    } ${viewMode === 'list' ? 'flex flex-row items-stretch' : 'flex flex-col'}`}>
       <div className={`flex items-center gap-2 p-2.5 transition-all duration-500 ${
         task.isCompleted 
           ? 'bg-emerald-500/10 dark:bg-emerald-950/40' 
           : 'bg-indigo-600'
-      }`}>
+      } ${viewMode === 'list' ? 'w-1/3 border-r border-slate-200 dark:border-slate-800' : ''}`}>
         <button 
           onClick={toggleTaskCompletion}
           className={`flex-shrink-0 transition-all duration-300 transform ${
@@ -223,41 +230,47 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
           <button onClick={() => onDelete(task.id)} title="Delete" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-red-500 hover:bg-red-500/10' : 'text-white/60 hover:text-red-300 hover:bg-white/10'}`}>
             <Trash2 size={13} />
           </button>
-          <button onClick={() => setIsExpanded(!isExpanded)} title="Expand" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-slate-600' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>
-            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          </button>
+          {viewMode === 'grid' && (
+            <button onClick={() => setIsExpanded(!isExpanded)} title="Expand" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-slate-600' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>
+              {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="p-2.5 pt-2">
-        <div className="flex items-center gap-1.5 mb-2.5 opacity-60">
-           <Clock size={10} className={task.isCompleted ? 'text-emerald-500' : 'text-indigo-500'} />
-           <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-             Effort: {formatElapsedTime(task.totalTimeSpent)}
-           </span>
-        </div>
-
-        <div className="relative group/progress">
-          <div className="flex justify-between items-center mb-1">
-             <div className={`h-1 flex-1 rounded-full overflow-hidden mr-2 transition-colors ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-               <div 
-                  className={`h-full transition-all duration-700 ease-out ${task.isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'}`}
-                  style={{ width: `${task.percentage}%` }}
-                />
-             </div>
-             <span className={`text-[10px] font-black w-6 text-right transition-colors duration-500 ${task.isCompleted ? 'text-emerald-500' : 'text-indigo-500 dark:text-indigo-400'}`}>
-               {task.percentage}%
+      <div className={`p-2.5 pt-2 ${viewMode === 'list' ? 'flex-1 flex flex-col justify-center' : ''}`}>
+        {(task.status || 'active') !== 'upcoming' && (
+          <div className="flex items-center gap-1.5 mb-2.5 opacity-60">
+             <Clock size={10} className={task.isCompleted ? 'text-emerald-500' : 'text-indigo-500'} />
+             <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+               Effort: {formatElapsedTime(task.totalTimeSpent)}
              </span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={task.percentage}
-            onChange={handlePercentageChange}
-            className="absolute -top-1 left-0 w-[calc(100%-1.75rem)] h-3 opacity-0 cursor-pointer z-10"
-          />
-        </div>
+        )}
+
+        {(task.status || 'active') !== 'upcoming' && (
+          <div className="relative group/progress">
+            <div className="flex justify-between items-center mb-1">
+               <div className={`h-1 flex-1 rounded-full overflow-hidden mr-2 transition-colors ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                 <div 
+                    className={`h-full transition-all duration-700 ease-out ${task.isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'}`}
+                    style={{ width: `${task.percentage}%` }}
+                  />
+               </div>
+               <span className={`text-[10px] font-black w-6 text-right transition-colors duration-500 ${task.isCompleted ? 'text-emerald-500' : 'text-indigo-500 dark:text-indigo-400'}`}>
+                 {task.percentage}%
+               </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={task.percentage}
+              onChange={handlePercentageChange}
+              className="absolute -top-1 left-0 w-[calc(100%-1.75rem)] h-3 opacity-0 cursor-pointer z-10"
+            />
+          </div>
+        )}
 
         {isExpanded && (
           <div className={`mt-3 pt-3 border-t space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 ${darkMode ? 'border-slate-800' : 'border-slate-50'}`}>
@@ -302,22 +315,24 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                   </div>
                   
                   <div className="flex items-center gap-1">
-                    <button 
-                      onClick={() => setEditingSubtaskProgress(editingSubtaskProgress === sub.id ? null : sub.id)}
-                      className={`p-1 transition-all rounded-md flex items-center gap-1 ${
-                        sub.percentage && sub.percentage > 0 && !sub.isCompleted 
-                        ? 'text-indigo-500 bg-indigo-500/10' 
-                        : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
-                      title="Set Progress"
-                    >
-                      <CircleDashed size={11} />
-                      {(sub.percentage ?? 0) > 0 && sub.percentage! < 100 && (
-                        <span className="text-[9px] font-bold">{sub.percentage}%</span>
-                      )}
-                    </button>
+                    {(task.status || 'active') !== 'upcoming' && (
+                      <button 
+                        onClick={() => setEditingSubtaskProgress(editingSubtaskProgress === sub.id ? null : sub.id)}
+                        className={`p-1 transition-all rounded-md flex items-center gap-1 ${
+                          sub.percentage && sub.percentage > 0 && !sub.isCompleted 
+                          ? 'text-indigo-500 bg-indigo-500/10' 
+                          : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                        title="Set Progress"
+                      >
+                        <CircleDashed size={11} />
+                        {(sub.percentage ?? 0) > 0 && sub.percentage! < 100 && (
+                          <span className="text-[9px] font-bold">{sub.percentage}%</span>
+                        )}
+                      </button>
+                    )}
 
-                    {!sub.isCompleted && (
+                    {!sub.isCompleted && (task.status || 'active') !== 'upcoming' && (
                       <button 
                         onClick={() => onStartTimer(task.id, sub.title)}
                         className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-indigo-500"
@@ -326,10 +341,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                         <Clock size={11} />
                       </button>
                     )}
+                    
+                    <button 
+                      onClick={() => deleteSubtask(sub.id)}
+                      className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-slate-400 hover:text-red-500"
+                      title="Delete Subtask"
+                    >
+                      <Trash2 size={11} />
+                    </button>
                   </div>
                 </div>
 
-                {editingSubtaskProgress === sub.id && (
+                {editingSubtaskProgress === sub.id && (task.status || 'active') !== 'upcoming' && (
                   <div className="pl-5 pb-2 pt-1 animate-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center gap-3">
                       <input 
@@ -346,7 +369,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                   </div>
                 )}
 
-                {(sub.timeSpent ?? 0) > 0 && (
+                {(sub.timeSpent ?? 0) > 0 && (task.status || 'active') !== 'upcoming' && (
                   <div className="pl-5 flex items-center gap-1 opacity-40">
                     <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Logged: {formatElapsedTime(sub.timeSpent)}</span>
                   </div>

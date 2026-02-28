@@ -10,6 +10,7 @@ import DriftAlert from './components/DriftAlert';
 import { 
   Plus, 
   LayoutGrid, 
+  List,
   Search, 
   Target, 
   Filter, 
@@ -84,6 +85,7 @@ const App: React.FC = () => {
   });
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'active' | 'upcoming'>('active');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTask, setNewTask] = useState<{ title: string; description: string; status: 'active' | 'upcoming' }>({ title: '', description: '', status: 'active' });
   
@@ -259,7 +261,27 @@ const App: React.FC = () => {
   };
 
   const updateTask = (updatedTask: Task) => {
-    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+    setTasks(tasks.map(t => {
+      if (t.id === updatedTask.id) {
+        if ((t.status || 'active') === 'active' && updatedTask.status === 'upcoming') {
+          return {
+            ...updatedTask,
+            totalTimeSpent: 0,
+            percentage: 0,
+            isCompleted: false,
+            subtasks: updatedTask.subtasks.map(s => ({
+              ...s,
+              timeSpent: 0,
+              percentage: 0,
+              isCompleted: false,
+              sessions: []
+            }))
+          };
+        }
+        return updatedTask;
+      }
+      return t;
+    }));
   };
 
   const deleteTask = (id: string) => {
@@ -482,6 +504,22 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className={`flex items-center p-1 border rounded-lg shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
                   <button 
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? (darkMode ? 'bg-slate-800 text-indigo-400' : 'bg-slate-100 text-indigo-600') : (darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}
+                    title="Grid View"
+                  >
+                    <LayoutGrid size={13} />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('list')}
+                    className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? (darkMode ? 'bg-slate-800 text-indigo-400' : 'bg-slate-100 text-indigo-600') : (darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}
+                    title="List View"
+                  >
+                    <List size={13} />
+                  </button>
+                </div>
+                <div className={`flex items-center p-1 border rounded-lg shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                  <button 
                     onClick={() => setFilterStatus('active')}
                     className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${filterStatus === 'active' ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600') : (darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
                   >
@@ -497,7 +535,10 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 items-start">
+            <div className={viewMode === 'grid' 
+              ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 items-start"
+              : "flex flex-col gap-3"
+            }>
               {filteredAndSortedTasks.length > 0 ? (
                 filteredAndSortedTasks.map(task => (
                   <TaskCard 
@@ -507,6 +548,7 @@ const App: React.FC = () => {
                     onDelete={deleteTask}
                     onStartTimer={startTaskTimer}
                     darkMode={darkMode}
+                    viewMode={viewMode}
                   />
                 ))
               ) : (
