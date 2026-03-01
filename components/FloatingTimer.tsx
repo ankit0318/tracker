@@ -27,6 +27,12 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ type, startTime, onDone, 
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.hidden) {
+        // If PiP is already open, just ensure it's focused and visible
+        if (pipWindowRef.current) {
+          pipWindowRef.current.focus();
+          return;
+        }
+
         if (!pipWindowRef.current && !pipClosedManually.current && 'documentPictureInPicture' in window) {
           try {
             const pip = await (window as any).documentPictureInPicture.requestWindow({
@@ -53,6 +59,11 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ type, startTime, onDone, 
               }
             });
 
+            // Also clone any existing style/link tags to be safe (especially for Vite dev mode)
+            document.head.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
+              pip.document.head.appendChild(node.cloneNode(true));
+            });
+
             if (darkMode) {
               pip.document.documentElement.classList.add('dark');
             }
@@ -60,6 +71,10 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ type, startTime, onDone, 
             pip.document.body.style.margin = '0';
             pip.document.body.style.padding = '0';
             pip.document.body.style.overflow = 'hidden';
+            pip.document.body.style.width = '100vw';
+            pip.document.body.style.height = '100vh';
+            pip.document.body.style.display = 'flex';
+            pip.document.body.style.flexDirection = 'column';
 
             pip.addEventListener('pagehide', () => {
               pipWindowRef.current = null;
@@ -71,6 +86,20 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ type, startTime, onDone, 
 
             pipWindowRef.current = pip;
             setIsPipActive(true);
+            
+            // Force focus to ensure the PiP window stays on top
+            // and doesn't get pushed behind Chrome during the tab switch
+            pip.focus();
+            setTimeout(() => {
+              if (pipWindowRef.current) {
+                pipWindowRef.current.focus();
+              }
+            }, 50);
+            setTimeout(() => {
+              if (pipWindowRef.current) {
+                pipWindowRef.current.focus();
+              }
+            }, 200);
           } catch (error) {
             console.error('Failed to open PiP:', error);
           }
