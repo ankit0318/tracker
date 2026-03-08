@@ -23,7 +23,8 @@ import {
   ChevronRight,
   Utensils, 
   Coffee, 
-  Armchair
+  Armchair,
+  Flame
 } from 'lucide-react';
 
 const INITIAL_TASKS: Task[] = [
@@ -337,17 +338,6 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative group hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
-              <input
-                type="text"
-                placeholder="Search focus..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={`pl-8 pr-3 py-1 border-none rounded-lg text-xs font-medium focus:ring-1 focus:ring-indigo-500 outline-none w-40 transition-all ${darkMode ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'}`}
-              />
-            </div>
-            
             {/* Desktop Wellness Buttons */}
             <div className={`hidden lg:flex items-center gap-1 p-1 rounded-lg transition-colors duration-300 mr-2 ${
               darkMode ? 'bg-slate-800' : 'bg-slate-100'
@@ -370,6 +360,16 @@ const App: React.FC = () => {
                  </button>
                ))}
             </div>
+
+            <a 
+              href="https://180day.netlify.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-colors ${darkMode ? 'bg-slate-800 text-orange-500 hover:bg-slate-700' : 'bg-slate-100 text-orange-500 hover:bg-slate-200'}`}
+              title="180 Day Transformation"
+            >
+              180 Day
+            </a>
 
             <button 
               onClick={() => setDarkMode(!darkMode)}
