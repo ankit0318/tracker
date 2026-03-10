@@ -451,7 +451,7 @@ const App: React.FC = () => {
                   <BarChart3 size={14} className="text-indigo-500 group-hover:text-indigo-400 transition-colors" />
                   <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] group-hover:text-indigo-500 transition-colors ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time Analysis</h2>
                 </div>
-                <ChevronRight size={14} className={`opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                <ChevronRight size={14} className={`transition-all ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
               </div>
               <div className="mb-6 pb-4 border-b border-slate-800/20 dark:border-slate-800">
                 <div className="flex items-baseline gap-1.5 mb-1">

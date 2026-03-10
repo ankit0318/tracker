@@ -214,12 +214,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
               } ${task.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
                 {task.title}
               </h3>
-              <Edit2 size={10} className="text-white/20 group-hover/title:opacity-100 opacity-0 transition-opacity" />
+              <Edit2 size={10} className="text-white/40 transition-opacity" />
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 transition-opacity">
           <button 
             onClick={() => onUpdate({ ...task, status: (task.status || 'active') === 'upcoming' ? 'active' : 'upcoming' })} 
             title={(task.status || 'active') === 'upcoming' ? 'Move to Active' : 'Move to Upcoming'} 
@@ -309,7 +309,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                         } ${sub.isCompleted ? 'strikethrough-animate strikethrough-active' : 'strikethrough-animate'}`}>
                           {sub.title}
                         </span>
-                        <Edit2 size={8} className="text-slate-400 opacity-0 group-hover/subtext:opacity-100 transition-opacity" />
+                        <Edit2 size={8} className="text-slate-400 transition-opacity" />
                       </div>
                     )}
                   </div>
@@ -335,7 +335,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                     {!sub.isCompleted && (task.status || 'active') !== 'upcoming' && (
                       <button 
                         onClick={() => onStartTimer(task.id, sub.title)}
-                        className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-indigo-500"
+                        className="p-1 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-indigo-500"
                         title="Focus Timer"
                       >
                         <Clock size={11} />
@@ -344,7 +344,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
                     
                     <button 
                       onClick={() => deleteSubtask(sub.id)}
-                      className="p-1 opacity-0 group-hover/sub:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-slate-400 hover:text-red-500"
+                      className="p-1 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-slate-400 hover:text-red-500"
                       title="Delete Subtask"
                     >
                       <Trash2 size={11} />
