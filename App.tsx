@@ -26,6 +26,22 @@ import {
   Armchair,
   Flame
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 
 const INITIAL_TASKS: Task[] = [
   {
@@ -92,6 +108,30 @@ const App: React.FC = () => {
   
   const [activeTimer, setActiveTimer] = useState<{ taskId: string; subtaskTitle: string } | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setTasks((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
 
   // Persistence
   useEffect(() => {
@@ -236,8 +276,6 @@ const App: React.FC = () => {
       t.title.toLowerCase().includes(search.toLowerCase()) &&
       (t.status || 'active') === filterStatus
     );
-
-    result.sort((a, b) => b.createdAt - a.createdAt);
 
     return result;
   }, [tasks, search, filterStatus]);
@@ -535,29 +573,40 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className={(filterStatus === 'upcoming' ? 'list' : viewMode) === 'grid' 
-              ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 items-start"
-              : "flex flex-col gap-3"
-            }>
-              {filteredAndSortedTasks.length > 0 ? (
-                filteredAndSortedTasks.map(task => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task} 
-                    onUpdate={updateTask}
-                    onDelete={deleteTask}
-                    onStartTimer={startTaskTimer}
-                    darkMode={darkMode}
-                    viewMode={filterStatus === 'upcoming' ? 'list' : viewMode}
-                  />
-                ))
-              ) : (
-                <div className={`col-span-full py-20 flex flex-col items-center justify-center rounded-2xl border border-dashed shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                  <Target size={24} strokeWidth={1} className={`mb-3 ${darkMode ? 'text-slate-800' : 'text-slate-200'}`} />
-                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>Pipeline Empty</p>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={filteredAndSortedTasks.map(t => t.id)}
+                strategy={(filterStatus === 'upcoming' ? 'list' : viewMode) === 'grid' ? rectSortingStrategy : verticalListSortingStrategy}
+              >
+                <div className={(filterStatus === 'upcoming' ? 'list' : viewMode) === 'grid' 
+                  ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 items-start"
+                  : "flex flex-col gap-3"
+                }>
+                  {filteredAndSortedTasks.length > 0 ? (
+                    filteredAndSortedTasks.map(task => (
+                      <TaskCard 
+                        key={task.id} 
+                        task={task} 
+                        onUpdate={updateTask}
+                        onDelete={deleteTask}
+                        onStartTimer={startTaskTimer}
+                        darkMode={darkMode}
+                        viewMode={filterStatus === 'upcoming' ? 'list' : viewMode}
+                      />
+                    ))
+                  ) : (
+                    <div className={`col-span-full py-20 flex flex-col items-center justify-center rounded-2xl border border-dashed shadow-sm transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                      <Target size={24} strokeWidth={1} className={`mb-3 ${darkMode ? 'text-slate-800' : 'text-slate-200'}`} />
+                      <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>Pipeline Empty</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </SortableContext>
+            </DndContext>
           </div>
         </div>
       </main>

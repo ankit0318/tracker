@@ -13,8 +13,11 @@ import {
   CircleDashed,
   Edit2,
   Calendar,
-  Play
+  Play,
+  GripVertical
 } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TaskCardProps {
   task: Task;
@@ -26,6 +29,22 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTimer, darkMode = false, viewMode = 'grid' }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   const [isExpanded, setIsExpanded] = useState(viewMode === 'grid' && (task.status || 'active') !== 'upcoming');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [editingSubtaskProgress, setEditingSubtaskProgress] = useState<string | null>(null);
@@ -174,7 +193,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
   };
 
   return (
-    <div className={`group rounded-lg border transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden ${
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className={`group rounded-lg border transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden ${
       justFinishedTask ? 'task-completed-glow' : ''
     } ${
       darkMode 
@@ -194,8 +216,17 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
         }
       }}
       >
+        <div 
+          {...attributes} 
+          {...listeners}
+          className={`cursor-grab active:cursor-grabbing transition-colors ${
+            task.isCompleted ? 'text-slate-400 hover:text-slate-600' : 'text-white/40 hover:text-white'
+          }`}
+        >
+          <GripVertical size={14} />
+        </div>
         <button 
-          onClick={toggleTaskCompletion}
+          onClick={(e) => { e.stopPropagation(); toggleTaskCompletion(); }}
           className={`flex-shrink-0 transition-all duration-300 transform ${
             task.isCompleted ? 'text-emerald-500 scale-110' : 'text-white/60 hover:text-white'
           } ${lastCompletedId === task.id ? 'animate-pop' : ''}`}
@@ -214,7 +245,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
               className="w-full bg-white/10 text-white text-[13px] font-bold px-1 rounded outline-none ring-1 ring-white/30"
             />
           ) : (
-            <div className="flex items-center gap-1 cursor-text" onClick={() => setIsEditingTitle(true)}>
+            <div className="flex items-center gap-1 cursor-text" onClick={(e) => { e.stopPropagation(); setIsEditingTitle(true); }}>
               <h3 className={`text-[13px] font-bold truncate transition-all duration-500 ${
                 task.isCompleted 
                   ? 'text-emerald-600 dark:text-emerald-400 opacity-80' 
@@ -229,17 +260,17 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
 
         <div className="flex items-center gap-0.5 transition-opacity">
           <button 
-            onClick={() => onUpdate({ ...task, status: (task.status || 'active') === 'upcoming' ? 'active' : 'upcoming' })} 
+            onClick={(e) => { e.stopPropagation(); onUpdate({ ...task, status: (task.status || 'active') === 'upcoming' ? 'active' : 'upcoming' }); }} 
             title={(task.status || 'active') === 'upcoming' ? 'Move to Active' : 'Move to Upcoming'} 
             className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/10' : 'text-white/60 hover:text-indigo-300 hover:bg-white/10'}`}
           >
             {(task.status || 'active') === 'upcoming' ? <Play size={13} /> : <Calendar size={13} />}
           </button>
-          <button onClick={() => onDelete(task.id)} title="Delete" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-red-500 hover:bg-red-500/10' : 'text-white/60 hover:text-red-300 hover:bg-white/10'}`}>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(task.id); }} title="Delete" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-red-500 hover:bg-red-500/10' : 'text-white/60 hover:text-red-300 hover:bg-white/10'}`}>
             <Trash2 size={13} />
           </button>
           {viewMode === 'grid' && (task.status || 'active') !== 'upcoming' && (
-            <button onClick={() => setIsExpanded(!isExpanded)} title="Expand" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-slate-600' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>
+            <button onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} title="Expand" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-slate-600' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>
               {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>
           )}
