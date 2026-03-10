@@ -26,7 +26,7 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTimer, darkMode = false, viewMode = 'grid' }) => {
-  const [isExpanded, setIsExpanded] = useState(viewMode === 'grid');
+  const [isExpanded, setIsExpanded] = useState(viewMode === 'grid' && (task.status || 'active') !== 'upcoming');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [editingSubtaskProgress, setEditingSubtaskProgress] = useState<string | null>(null);
   
@@ -185,7 +185,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
         task.isCompleted 
           ? 'bg-emerald-500/10 dark:bg-emerald-950/40' 
           : 'bg-indigo-600'
-      } ${viewMode === 'list' ? 'w-1/3 border-r border-slate-200 dark:border-slate-800' : ''}`}>
+      } ${viewMode === 'list' ? 'w-1/3 border-r border-slate-200 dark:border-slate-800' : ''} ${
+        (task.status || 'active') === 'upcoming' ? 'cursor-pointer hover:bg-indigo-700' : ''
+      }`}
+      onClick={() => {
+        if ((task.status || 'active') === 'upcoming') {
+          setIsExpanded(!isExpanded);
+        }
+      }}
+      >
         <button 
           onClick={toggleTaskCompletion}
           className={`flex-shrink-0 transition-all duration-300 transform ${
@@ -230,8 +238,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onStartTi
           <button onClick={() => onDelete(task.id)} title="Delete" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-red-500 hover:bg-red-500/10' : 'text-white/60 hover:text-red-300 hover:bg-white/10'}`}>
             <Trash2 size={13} />
           </button>
-          {viewMode === 'grid' && (
+          {viewMode === 'grid' && (task.status || 'active') !== 'upcoming' && (
             <button onClick={() => setIsExpanded(!isExpanded)} title="Expand" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-slate-600' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>
+              {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+          )}
+          {(task.status || 'active') === 'upcoming' && (
+            <button onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} title="Expand" className={`p-1 transition-colors rounded ${task.isCompleted ? 'text-slate-400 hover:text-slate-600' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>
               {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>
           )}

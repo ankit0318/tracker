@@ -535,7 +535,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className={viewMode === 'grid' 
+            <div className={(filterStatus === 'upcoming' ? 'list' : viewMode) === 'grid' 
               ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 items-start"
               : "flex flex-col gap-3"
             }>
@@ -548,7 +548,7 @@ const App: React.FC = () => {
                     onDelete={deleteTask}
                     onStartTimer={startTaskTimer}
                     darkMode={darkMode}
-                    viewMode={viewMode}
+                    viewMode={filterStatus === 'upcoming' ? 'list' : viewMode}
                   />
                 ))
               ) : (
