@@ -1,0 +1,51 @@
+{
+  "productName": "TrackIt",
+  "version": "1.0.0",
+  "identifier": "com.trackit.desktop",
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "TrackIt Dashboard",
+        "label": "main",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "url": "index.html"
+      },
+      {
+        "title": "TrackIt Timer",
+        "label": "timer-widget",
+        "width": 340,
+        "height": 130,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "transparent": true,
+        "hidden": true,
+        "url": "index.html?window=timer-widget"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../dist"
+  }
+}

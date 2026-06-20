@@ -1,8 +1,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Play, Pause, Timer as TimerIcon } from 'lucide-react';
+import { 
+  isTauri, 
+  startTimerSync, 
+  stopTimerSync, 
+  updateTimerElapsed, 
+  showTimerWidget, 
+  hideTimerWidget 
+} from '../services/tauriService';
 
 interface TimerOverlayProps {
+  taskId: string;
   subtaskTitle: string;
   onClose: () => void;
   onComplete: (elapsedSeconds: number) => void;
@@ -13,7 +22,7 @@ const MOTIVATIONAL_QUOTES = [
   "Bit by Bit",
 ];
 
-const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onComplete, darkMode }) => {
+const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClose, onComplete, darkMode }) => {
   const [duration, setDuration] = useState<number>(25); // minutes
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isActive, setIsActive] = useState(false);
@@ -64,6 +73,11 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
     setIsStarted(true);
     setIsActive(true);
     setIsPaused(false);
+    
+    if (isTauri()) {
+      startTimerSync(taskId, subtaskTitle);
+      showTimerWidget();
+    }
   };
 
   const togglePause = () => {
@@ -73,6 +87,18 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
   const finishTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     onComplete(elapsed);
+    if (isTauri()) {
+      stopTimerSync();
+      hideTimerWidget();
+    }
+    onClose();
+  };
+
+  const handleClose = () => {
+    if (isTauri()) {
+      stopTimerSync();
+      hideTimerWidget();
+    }
     onClose();
   };
 
@@ -88,8 +114,17 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
   useEffect(() => {
     if (isActive && !isPaused && timeLeft > 0) {
       timerRef.current = window.setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-        setElapsed((prev) => prev + 1);
+        setTimeLeft((prev) => {
+          const nextTime = prev - 1;
+          return nextTime;
+        });
+        setElapsed((prev) => {
+          const nextElapsed = prev + 1;
+          if (isTauri()) {
+            updateTimerElapsed(nextElapsed);
+          }
+          return nextElapsed;
+        });
       }, 1000);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -107,6 +142,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
     };
   }, [isActive, isPaused, timeLeft]);
 
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -123,7 +159,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ subtaskTitle, onClose, onCo
         <div className={`w-full max-w-sm rounded-3xl p-8 shadow-2xl ${darkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}`}>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-light uppercase tracking-widest">Set Focus Timer</h2>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+            <button onClick={handleClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
               <X size={20} />
             </button>
           </div>

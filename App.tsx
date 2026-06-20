@@ -7,6 +7,19 @@ import TimerOverlay from './components/TimerOverlay';
 import AnalyticsModal from './components/AnalyticsModal';
 import FloatingTimer from './components/FloatingTimer';
 import DriftAlert from './components/DriftAlert';
+import WidgetWindowView from './components/WidgetWindowView';
+import { 
+  isTauri, 
+  getTasks, 
+  saveAllTasks, 
+  getActivities, 
+  saveAllActivities, 
+  getSetting, 
+  saveSetting,
+  getTimerSyncState,
+  stopTimerSync,
+  hideTimerWidget
+} from './services/tauriService';
 import { 
   Plus, 
   LayoutGrid, 
@@ -76,6 +89,17 @@ const INITIAL_TASKS: Task[] = [
 ];
 
 const App: React.FC = () => {
+  const isWidgetWindow = typeof window !== 'undefined' && window.location.search.includes('window=timer-widget');
+
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('ascend_theme');
+    return saved === null ? true : saved === 'dark';
+  });
+
+  if (isWidgetWindow) {
+    return <WidgetWindowView darkMode={darkMode} />;
+  }
+
   const [tasks, setTasks] = useState<Task[]>(() => {
     const saved = localStorage.getItem('ascend_tasks_timer_v3');
     return saved ? JSON.parse(saved) : INITIAL_TASKS;
@@ -96,10 +120,6 @@ const App: React.FC = () => {
   // New state to prevent alert from reappearing immediately after dismissal for the same session
   const [driftAlertDismissed, setDriftAlertDismissed] = useState(false);
 
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('ascend_theme');
-    return saved === null ? true : saved === 'dark';
-  });
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'active' | 'upcoming'>('active');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -133,23 +153,58 @@ const App: React.FC = () => {
     }
   };
 
-  // Persistence
+  // Persistence & SQLite Database Load/Sync Layer
   useEffect(() => {
-    localStorage.setItem('ascend_tasks_timer_v3', JSON.stringify(tasks));
+    const loadAllDatabaseContent = async () => {
+      const dbTasks = await getTasks(INITIAL_TASKS);
+      setTasks(dbTasks);
+      
+      const dbActs = await getActivities();
+      setActivityHistory(dbActs);
+      
+      const dbTheme = await getSetting('ascend_theme', 'dark');
+      setDarkMode(dbTheme === 'dark');
+    };
+    loadAllDatabaseContent();
+  }, []);
+
+  useEffect(() => {
+    saveAllTasks(tasks);
   }, [tasks]);
 
   useEffect(() => {
-    localStorage.setItem('ascend_activities', JSON.stringify(activityHistory));
+    saveAllActivities(activityHistory);
   }, [activityHistory]);
 
   useEffect(() => {
-    localStorage.setItem('ascend_theme', darkMode ? 'dark' : 'light');
+    saveSetting('ascend_theme', darkMode ? 'dark' : 'light');
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Synchronize active focus timer with central SQLite / Rust State
+  useEffect(() => {
+    if (!isTauri() || isWidgetWindow) return;
+
+    const syncActiveTimerWithRust = async () => {
+      const state = await getTimerSyncState();
+      if (state && state.taskId) {
+        if (!activeTimer || activeTimer.taskId !== state.taskId) {
+          setActiveTimer({ taskId: state.taskId, subtaskTitle: state.subtaskTitle || 'Focus Subtask' });
+        }
+      } else {
+        if (activeTimer) {
+          setActiveTimer(null);
+        }
+      }
+    };
+
+    const interval = setInterval(syncActiveTimerWithRust, 800);
+    return () => clearInterval(interval);
+  }, [activeTimer]);
 
   // Drift Logic
   useEffect(() => {
@@ -634,6 +689,7 @@ const App: React.FC = () => {
 
       {activeTimer && (
         <TimerOverlay 
+          taskId={activeTimer.taskId}
           subtaskTitle={activeTimer.subtaskTitle}
           darkMode={darkMode}
           onClose={() => setActiveTimer(null)}
