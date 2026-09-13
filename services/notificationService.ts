@@ -3,8 +3,43 @@
 
 const TIMER_ICON_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="%236366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
 
+export const APP_DEFAULT_TITLE = 'FocusFlow';
+
+export type TimerStatus = 'initial' | 'running' | 'paused' | 'completed' | 'stopped';
+
+/**
+ * Updates the browser tab title according to the timer state:
+ * - Initial / Stopped: FocusFlow
+ * - Running: 24:32 • FocusFlow
+ * - Paused: ⏸ 12:45 • FocusFlow
+ * - Completed: FocusFlow
+ */
+export const setTimerTabTitle = (
+  status: TimerStatus,
+  timeLeftSeconds?: number
+) => {
+  if (typeof document === 'undefined') return;
+
+  stopTitleFlashing();
+
+  if (status === 'running' && typeof timeLeftSeconds === 'number' && timeLeftSeconds > 0) {
+    const m = Math.floor(timeLeftSeconds / 60);
+    const s = timeLeftSeconds % 60;
+    const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    document.title = `${timeStr} • ${APP_DEFAULT_TITLE}`;
+  } else if (status === 'paused' && typeof timeLeftSeconds === 'number' && timeLeftSeconds > 0) {
+    const m = Math.floor(timeLeftSeconds / 60);
+    const s = timeLeftSeconds % 60;
+    const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    document.title = `⏸ ${timeStr} • ${APP_DEFAULT_TITLE}`;
+  } else {
+    // Initial, Stopped, or Completed
+    document.title = APP_DEFAULT_TITLE;
+  }
+};
+
 let titleBlinkInterval: number | null = null;
-let originalTitle = typeof document !== 'undefined' ? document.title : 'FocusFlow';
+let originalTitle = typeof document !== 'undefined' ? document.title : APP_DEFAULT_TITLE;
 
 export const isNotificationSupported = (): boolean => {
   return typeof window !== 'undefined' && 'Notification' in window;
@@ -122,17 +157,15 @@ export const formatDuration = (duration?: number | string): string => {
  * Visible across tabs and other desktop applications.
  */
 export const sendTimerCompletedNotification = (duration: number | string = 25) => {
-  const displayTitle = '🎉 Focus Complete!';
   const formattedDuration = formatDuration(duration);
-  const messageBody = `You focused for ${formattedDuration}. Great job!`;
+  const displayTitle = `🎉 Focus Complete!\nYou focused for ${formattedDuration}. Great job!`;
+  const messageBody = '';
 
   // 1. Play chime
   playNotificationChime();
 
-  // 2. Flash browser tab title if tab is hidden
-  if (typeof document !== 'undefined' && document.hidden) {
-    startTitleFlashing('🎉 Focus Complete! • FocusFlow');
-  }
+  // 2. Ensure tab title is clean FocusFlow as requested (avoids leaving a stale message in tab title)
+  setTimerTabTitle('completed');
 
   // 3. Dispatch native browser notification
   if (isNotificationSupported() && Notification.permission === 'granted') {
@@ -143,17 +176,31 @@ export const sendTimerCompletedNotification = (duration: number | string = 25) =
         badge: TIMER_ICON_SVG,
         tag: 'focusflow-focus-timer',
         renotify: true,
-        requireInteraction: true, // Remains on screen in Windows/macOS/Linux until user dismisses or clicks!
+        requireInteraction: true,
       });
+
+      // Automatically close notification after 10 seconds
+      const autoCloseTimeout = setTimeout(() => {
+        try {
+          notification.close();
+        } catch (e) {
+          // Ignore if already closed
+        }
+      }, 10000);
 
       notification.onclick = () => {
         try {
+          clearTimeout(autoCloseTimeout);
           window.focus();
         } catch (e) {
           // Ignore if browser prevents programmatic window.focus
         }
         stopTitleFlashing();
         notification.close();
+      };
+
+      notification.onclose = () => {
+        clearTimeout(autoCloseTimeout);
       };
     } catch (err) {
       console.warn('Error creating Notification instance:', err);

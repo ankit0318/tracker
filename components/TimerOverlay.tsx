@@ -14,7 +14,8 @@ import {
   getNotificationPermission,
   requestNotificationPermission,
   sendTimerCompletedNotification,
-  stopTitleFlashing
+  stopTitleFlashing,
+  setTimerTabTitle
 } from '../services/notificationService';
 
 interface TimerOverlayProps {
@@ -100,6 +101,9 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
 
     // Browser Notification visible on other tabs and outside browser
     sendTimerCompletedNotification(duration);
+
+    // Set tab title to FocusFlow when completed (avoids stale message)
+    setTimerTabTitle('completed');
   }, [duration]);
 
   const startTimer = async () => {
@@ -124,6 +128,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
     setIsStarted(true);
     setIsActive(true);
     setIsPaused(false);
+    setTimerTabTitle('running', totalSeconds);
     
     if (isTauri()) {
       startTimerSync(taskId, subtaskTitle);
@@ -144,16 +149,19 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
       }
       endTimeRef.current = null;
       setIsPaused(true);
+      setTimerTabTitle('paused', timeLeft);
     } else {
       // Resume: reset endTimeRef based on current remaining timeLeft
       const targetEndTime = Date.now() + timeLeft * 1000;
       endTimeRef.current = targetEndTime;
       setIsPaused(false);
+      setTimerTabTitle('running', timeLeft);
     }
   };
 
   const finishTimer = () => {
     stopTitleFlashing();
+    setTimerTabTitle('stopped');
     if (timerRef.current) clearInterval(timerRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     onComplete(elapsed);
@@ -166,6 +174,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
 
   const handleClose = () => {
     stopTitleFlashing();
+    setTimerTabTitle('stopped');
     if (timerRef.current) clearInterval(timerRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (isTauri()) {
@@ -174,6 +183,29 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
     }
     onClose();
   };
+
+  // Synchronize browser tab title with current timer state:
+  // - Initial / Stopped: FocusFlow
+  // - Running: 24:32 • FocusFlow
+  // - Paused: ⏸ 12:45 • FocusFlow
+  // - Completed: FocusFlow
+  useEffect(() => {
+    if (!isStarted) {
+      setTimerTabTitle('initial');
+    } else if (timeLeft === 0 || hasCompletedRef.current) {
+      setTimerTabTitle('completed');
+    } else if (isPaused) {
+      setTimerTabTitle('paused', timeLeft);
+    } else if (isActive) {
+      setTimerTabTitle('running', timeLeft);
+    } else {
+      setTimerTabTitle('stopped');
+    }
+
+    return () => {
+      setTimerTabTitle('stopped');
+    };
+  }, [isStarted, isActive, isPaused, timeLeft]);
 
   // Timer loop with background tab wall-clock accuracy
   useEffect(() => {
@@ -201,6 +233,8 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
 
       if (remainingMs <= 0) {
         handleTimerCompleted();
+      } else if (!isPaused) {
+        setTimerTabTitle('running', remainingSecs);
       }
     };
 
