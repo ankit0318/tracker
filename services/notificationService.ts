@@ -157,9 +157,9 @@ export const formatDuration = (duration?: number | string): string => {
  * Visible across tabs and other desktop applications.
  */
 export const sendTimerCompletedNotification = (duration: number | string = 25) => {
+  const displayTitle = '🎉 Focus Complete!';
   const formattedDuration = formatDuration(duration);
-  const displayTitle = `🎉 Focus Complete!\nYou focused for ${formattedDuration}. Great job!`;
-  const messageBody = '';
+  const messageBody = `You focused for ${formattedDuration}. Great job!`;
 
   // 1. Play chime
   playNotificationChime();
@@ -176,31 +176,17 @@ export const sendTimerCompletedNotification = (duration: number | string = 25) =
         badge: TIMER_ICON_SVG,
         tag: 'focusflow-focus-timer',
         renotify: true,
-        requireInteraction: true,
+        requireInteraction: true, // Remains on screen in Windows/macOS/Linux until user dismisses or clicks!
       });
-
-      // Automatically close notification after 10 seconds
-      const autoCloseTimeout = setTimeout(() => {
-        try {
-          notification.close();
-        } catch (e) {
-          // Ignore if already closed
-        }
-      }, 10000);
 
       notification.onclick = () => {
         try {
-          clearTimeout(autoCloseTimeout);
           window.focus();
         } catch (e) {
           // Ignore if browser prevents programmatic window.focus
         }
         stopTitleFlashing();
         notification.close();
-      };
-
-      notification.onclose = () => {
-        clearTimeout(autoCloseTimeout);
       };
     } catch (err) {
       console.warn('Error creating Notification instance:', err);
