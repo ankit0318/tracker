@@ -158,8 +158,8 @@ export const formatDuration = (duration?: number | string): string => {
  */
 export const sendTimerCompletedNotification = (duration: number | string = 25) => {
   const formattedDuration = formatDuration(duration);
-  const displayTitle = `🎉 Focus Complete!\nYou focused for ${formattedDuration}. Great job!`;
-  const messageBody = '';
+  const displayTitle = '🎉 Focus Complete!';
+  const messageBody = `You focused for ${formattedDuration}. Great job!`;
 
   // 1. Play chime
   playNotificationChime();
@@ -185,7 +185,7 @@ export const sendTimerCompletedNotification = (duration: number | string = 25) =
         } catch (e) {
           // Ignore if already closed
         }
-      }, 10000);
+      }, 5000);
 
       notification.onclick = () => {
         clearTimeout(autoCloseTimer);
