@@ -8,6 +8,7 @@ import {
   hideTimerWidget, 
   TimerSyncState 
 } from '../services/tauriService';
+import { sendTimerCompletedNotification } from '../services/notificationService';
 
 interface WidgetWindowViewProps {
   darkMode: boolean;
@@ -56,7 +57,11 @@ const WidgetWindowView: React.FC<WidgetWindowViewProps> = ({ darkMode }) => {
       timerIntervalRef.current = window.setInterval(() => {
         setTimeLeft((prev) => {
           const next = prev - 1;
-          return next >= 0 ? next : 0;
+          if (next <= 0) {
+            sendTimerCompletedNotification(timerState?.subtaskTitle || 'Focus Subtask');
+            return 0;
+          }
+          return next;
         });
         setLocalElapsed((prev) => {
           const nextElapsed = prev + 1;
@@ -71,7 +76,7 @@ const WidgetWindowView: React.FC<WidgetWindowViewProps> = ({ darkMode }) => {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isActive, isPaused]);
+  }, [isActive, isPaused, timerState]);
 
   const handleTogglePause = () => {
     setIsPaused(!isPaused);
