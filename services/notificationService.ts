@@ -4,7 +4,7 @@
 const TIMER_ICON_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="%236366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
 
 let titleBlinkInterval: number | null = null;
-let originalTitle = typeof document !== 'undefined' ? document.title : 'TrackIt Progress Tracker';
+let originalTitle = typeof document !== 'undefined' ? document.title : 'FocusFlow';
 
 export const isNotificationSupported = (): boolean => {
   return typeof window !== 'undefined' && 'Notification' in window;
@@ -33,11 +33,11 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
 /**
  * Flash tab title if the document is in the background
  */
-export const startTitleFlashing = (alertText: string = '🔔 Timer Done! • TrackIt') => {
+export const startTitleFlashing = (alertText: string = '🔔 Timer Done! • FocusFlow') => {
   if (typeof document === 'undefined') return;
 
   if (!titleBlinkInterval) {
-    originalTitle = document.title || 'TrackIt Progress Tracker';
+    originalTitle = document.title || 'FocusFlow';
     let isAlert = true;
 
     titleBlinkInterval = window.setInterval(() => {
@@ -102,22 +102,36 @@ export const playNotificationChime = () => {
   }
 };
 
+export const formatDuration = (duration?: number | string): string => {
+  if (duration === undefined || duration === null) {
+    return '25 minutes';
+  }
+  if (typeof duration === 'number') {
+    return `${duration} ${duration === 1 ? 'minute' : 'minutes'}`;
+  }
+  const trimmed = duration.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const num = parseInt(trimmed, 10);
+    return `${num} ${num === 1 ? 'minute' : 'minutes'}`;
+  }
+  return trimmed;
+};
+
 /**
  * Dispatches a native desktop notification when the timer completes.
  * Visible across tabs and other desktop applications.
  */
-export const sendTimerCompletedNotification = (taskTitle: string) => {
-  const displayTitle = '⏰ Focus Timer Completed!';
-  const messageBody = taskTitle 
-    ? `Great job! Your focus session for "${taskTitle}" has ended.`
-    : 'Your focus session has completed. Take a well-deserved break or mark it done!';
+export const sendTimerCompletedNotification = (duration: number | string = 25) => {
+  const displayTitle = '🎉 Focus Complete!';
+  const formattedDuration = formatDuration(duration);
+  const messageBody = `You focused for ${formattedDuration}. Great job!`;
 
   // 1. Play chime
   playNotificationChime();
 
   // 2. Flash browser tab title if tab is hidden
   if (typeof document !== 'undefined' && document.hidden) {
-    startTitleFlashing('🔔 Focus Done! • TrackIt');
+    startTitleFlashing('🎉 Focus Complete! • FocusFlow');
   }
 
   // 3. Dispatch native browser notification
@@ -127,7 +141,7 @@ export const sendTimerCompletedNotification = (taskTitle: string) => {
         body: messageBody,
         icon: TIMER_ICON_SVG,
         badge: TIMER_ICON_SVG,
-        tag: 'trackit-focus-timer',
+        tag: 'focusflow-focus-timer',
         renotify: true,
         requireInteraction: true, // Remains on screen in Windows/macOS/Linux until user dismisses or clicks!
       });
@@ -157,7 +171,7 @@ export const sendTestNotification = async (): Promise<boolean> => {
   }
 
   if (permission === 'granted') {
-    sendTimerCompletedNotification('Test Focus Session');
+    sendTimerCompletedNotification(25);
     return true;
   }
   return false;

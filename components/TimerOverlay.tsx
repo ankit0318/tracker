@@ -99,8 +99,8 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
     playRingSound();
 
     // Browser Notification visible on other tabs and outside browser
-    sendTimerCompletedNotification(subtaskTitle);
-  }, [duration, subtaskTitle]);
+    sendTimerCompletedNotification(duration);
+  }, [duration]);
 
   const startTimer = async () => {
     const totalSeconds = duration * 60;
@@ -308,7 +308,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
                       const res = await requestNotificationPermission();
                       setNotificationPerm(res);
                       if (res === 'granted') {
-                        sendTimerCompletedNotification('Notifications Activated!');
+                        sendTimerCompletedNotification(duration);
                       }
                     }}
                     className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium transition-all shadow-md active:scale-95 shrink-0"
@@ -321,7 +321,7 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({ taskId, subtaskTitle, onClo
                   <button
                     type="button"
                     onClick={() => {
-                      sendTimerCompletedNotification('Sample Task: Timer Completed!');
+                      sendTimerCompletedNotification(duration);
                     }}
                     className={`px-2.5 py-1 rounded-xl text-[10px] font-medium tracking-wide transition-all shrink-0 ${
                       darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'

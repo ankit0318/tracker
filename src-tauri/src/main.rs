@@ -462,7 +462,7 @@ fn main() {
         std::env::current_dir().unwrap()
       });
       std::fs::create_dir_all(&app_dir).unwrap_or_default();
-      app_dir.push("trackit.db");
+      app_dir.push("focusflow.db");
       let path_str = app_dir.to_string_lossy().to_string();
 
       // Ensure folders and tables exist
@@ -487,7 +487,7 @@ fn main() {
         &[
           &tauri::menu::MenuItem::with_id(app, "toggle_dash", "Toggle Dashboard", true, None::<&str>).unwrap(),
           &tauri::menu::MenuItem::with_id(app, "toggle_timer", "Toggle Timer Widget", true, None::<&str>).unwrap(),
-          &tauri::menu::MenuItem::with_id(app, "quit", "Quit TrackIt", true, None::<&str>).unwrap(),
+          &tauri::menu::MenuItem::with_id(app, "quit", "Quit FocusFlow", true, None::<&str>).unwrap(),
         ],
       ).expect("Failed to build tray menu");
 

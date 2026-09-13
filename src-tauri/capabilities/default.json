@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema-capabilities.json",
   "identifier": "default-permissions",
-  "description": "Permit IPC and API operations for TrackIt local webview",
+  "description": "Permit IPC and API operations for FocusFlow local webview",
   "platforms": [
     "macOS",
     "windows",

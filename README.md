@@ -1,6 +1,6 @@
-# TrackIt Progress Tracker
+# FocusFlow Progress Tracker
 
-A sophisticated, minimalist task management dashboard designed for high-focus individuals. TrackIt features hierarchical subtasks, manual progress overrides, and integrated focus timers to help you visualize your journey toward completion.
+A sophisticated, minimalist task management dashboard designed for high-focus individuals. FocusFlow features hierarchical subtasks, manual progress overrides, and integrated focus timers to help you visualize your journey toward completion.
 
 ## 🚀 Tech Stack
 
@@ -39,7 +39,7 @@ This project is structured as a **Vite (React + TypeScript)** or **Static Site**
 
 ## 🔑 Environment Variables
 
-Currently, **no environment variables are required** for the core functionality of TrackIt. 
+Currently, **no environment variables are required** for the core functionality of FocusFlow. 
 
 Previously, an `API_KEY` for Google Gemini was used for AI-assisted task breakdown, but this has been removed to ensure the app remains a lightweight, privacy-focused manual tracker. If you wish to re-enable AI features in the future, you would need to add:
 

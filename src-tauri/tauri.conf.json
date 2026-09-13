@@ -1,7 +1,7 @@
 {
-  "productName": "TrackIt",
+  "productName": "FocusFlow",
   "version": "1.0.0",
-  "identifier": "com.trackit.desktop",
+  "identifier": "com.focusflow.desktop",
   "bundle": {
     "active": true,
     "targets": "all",
@@ -16,7 +16,7 @@
   "app": {
     "windows": [
       {
-        "title": "TrackIt Dashboard",
+        "title": "FocusFlow Dashboard",
         "label": "main",
         "width": 1200,
         "height": 800,
@@ -25,7 +25,7 @@
         "url": "index.html"
       },
       {
-        "title": "TrackIt Timer",
+        "title": "FocusFlow Timer",
         "label": "timer-widget",
         "width": 340,
         "height": 130,

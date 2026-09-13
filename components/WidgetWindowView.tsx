@@ -58,7 +58,7 @@ const WidgetWindowView: React.FC<WidgetWindowViewProps> = ({ darkMode }) => {
         setTimeLeft((prev) => {
           const next = prev - 1;
           if (next <= 0) {
-            sendTimerCompletedNotification(timerState?.subtaskTitle || 'Focus Subtask');
+            sendTimerCompletedNotification(25);
             return 0;
           }
           return next;
@@ -127,7 +127,7 @@ const WidgetWindowView: React.FC<WidgetWindowViewProps> = ({ darkMode }) => {
           ) : (
             <>
               <p data-tauri-drag-region className="text-[9px] font-black uppercase tracking-[0.15em] opacity-50">
-                TrackIt Desk
+                FocusFlow Desk
               </p>
               <h4 data-tauri-drag-region className="text-xs font-light tracking-wide truncate">
                 Timer Idle - Drag Me

@@ -1,8 +1,8 @@
 [package]
-name = "trackit"
+name = "focusflow"
 version = "1.0.0"
-description = "TrackIt Native Desktop Application"
-authors = ["TrackIt Team"]
+description = "FocusFlow Native Desktop Application"
+authors = ["FocusFlow Team"]
 edition = "2021"
 
 [build-dependencies]
