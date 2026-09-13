@@ -157,9 +157,9 @@ export const formatDuration = (duration?: number | string): string => {
  * Visible across tabs and other desktop applications.
  */
 export const sendTimerCompletedNotification = (duration: number | string = 25) => {
-  const displayTitle = '🎉 Focus Complete!';
   const formattedDuration = formatDuration(duration);
-  const messageBody = `You focused for ${formattedDuration}. Great job!`;
+  const displayTitle = `🎉 Focus Complete!\nYou focused for ${formattedDuration}. Great job!`;
+  const messageBody = '';
 
   // 1. Play chime
   playNotificationChime();
@@ -179,7 +179,16 @@ export const sendTimerCompletedNotification = (duration: number | string = 25) =
         requireInteraction: true, // Remains on screen in Windows/macOS/Linux until user dismisses or clicks!
       });
 
+      const autoCloseTimer = setTimeout(() => {
+        try {
+          notification.close();
+        } catch (e) {
+          // Ignore if already closed
+        }
+      }, 10000);
+
       notification.onclick = () => {
+        clearTimeout(autoCloseTimer);
         try {
           window.focus();
         } catch (e) {
