@@ -185,7 +185,7 @@ export const sendTimerCompletedNotification = (duration: number | string = 25) =
         } catch (e) {
           // Ignore if already closed
         }
-      }, 5000);
+      }, 3000);
 
       notification.onclick = () => {
         clearTimeout(autoCloseTimer);
